@@ -1,0 +1,57 @@
+{
+  "name": "fast-image-viewer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Fast Desktop Image Viewer",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && electron-builder"
+  },
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "clsx": "2.1.1",
+    "lucide-react": "^0.563.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "3.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.17",
+    "@types/node": "^22.0.0",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^26.0.0",
+    "electron-is-dev": "^3.0.0",
+    "lightningcss-win32-x64-msvc": "^1.30.2",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3",
+    "vite": "7.2.4",
+    "vite-plugin-singlefile": "2.3.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.antigravity.fastimage",
+    "productName": "FastImageViewer",
+    "copyright": "Copyright © 2026 은준욱",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": "portable"
+    }
+  }
+}
