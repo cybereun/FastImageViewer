@@ -62,6 +62,7 @@
 ## 동기화 기록
 
 - 작업 전 Y: 원본 checkout은 변경하지 않고 L: 작업본에서만 개발했습니다.
-- 검증 후 GitHub `v2.0.0` 태그/릴리스에 포터블 EXE를 업로드했습니다.
+- 검증 후 GitHub `v2.0.0` 및 `v2.0.1` 태그/릴리스에 포터블 EXE를 업로드했습니다.
 - 같은 검증된 소스·문서·실행파일을 Y: checkout에 복사했습니다.
-- 업데이트 기능은 이후 `v2.0.1` 태그/릴리스부터 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
+- `v2.0.1` 업데이트 자산은 GitHub API에서 `uploaded` 상태와 SHA-256 digest를 확인했고, Y: 실행파일 해시도 L:과 일치했습니다.
+- `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
