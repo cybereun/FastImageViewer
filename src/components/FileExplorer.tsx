@@ -289,10 +289,6 @@ export function FileExplorer({
         )}
       </div>
 
-      <div className="flex justify-between border-t border-gray-800 bg-[#252526] p-2 text-xs text-gray-400">
-        <span>{totalCount} {t(language, 'items')}</span>
-        <span>{loading ? t(language, 'scanning') : t(language, 'ready')}</span>
-      </div>
     </div>
   );
 }

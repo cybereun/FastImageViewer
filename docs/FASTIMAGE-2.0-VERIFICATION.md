@@ -1,4 +1,4 @@
-# FastImage 2.0/2.0.1/2.0.2 Verification Record
+# FastImage 2.0/2.0.1/2.0.2/2.0.3 Verification Record
 
 검증 기준일: 2026-08-30  
 작업 checkout: `L:\Codex-L\fast-image`
@@ -21,9 +21,9 @@
 
 ## 배포 산출물
 
-- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.2-Windows-Portable.exe`
-- 크기: 75,649,853 bytes
-- SHA-256: `7B0EE0CBD49F7E4C3F5CD7CF34206A3A29F16CF7B3B08892B5C065BEA818862F`
+- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.3-Windows-Portable.exe`
+- 크기: (GitHub Actions 릴리스 완료 후 기록)
+- SHA-256: (GitHub Actions 릴리스 완료 후 기록)
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -51,7 +51,7 @@
 - [ ] 동일 형식 원본 덮어쓰기 확인 대화상자 및 watcher 새로고침
 - [ ] 설정의 한국어/영어, 다크/라이트, 삭제 확인, 휠 동작, 기본 폴더
 - [ ] About의 진단 정보 복사 동작(이미지 데이터 미포함)
-- [ ] 하단 전체 이미지 가로 탭, 활성 이미지 표시, 우측 버전 표시 및 버전 클릭
+- [ ] 앱 전체 하단 통합 푸터의 항목 수·준비 상태·우측 버전 표시 및 버전 클릭
 - [ ] 새 GitHub Release가 있을 때 시작 후 업데이트 안내창 표시
 - [ ] 업데이트 안내창에서 릴리스 내용·버전·다운로드 진행률 표시
 - [ ] 다운로드 완료 후 SHA-256 검증 및 앱 재시작·포터블 EXE 교체
@@ -67,4 +67,4 @@
 - 같은 검증된 소스·문서·실행파일을 Y: checkout에 복사했습니다.
 - `v2.0.1` 업데이트 자산은 GitHub API에서 `uploaded` 상태와 SHA-256 digest를 확인했고, Y: 실행파일 해시도 L:과 일치했습니다.
 - `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
-- `v2.0.2` CI 자산은 GitHub Release에서 내려받아 L:에 반영했고, Y: 실행파일도 동일 SHA-256으로 동기화했습니다.
+- `v2.0.3` CI 자산은 GitHub Release에서 내려받아 L:에 반영하고, Y: 실행파일도 동일 SHA-256으로 동기화합니다.

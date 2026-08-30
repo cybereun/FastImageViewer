@@ -12,9 +12,9 @@ import {
   X,
 } from 'lucide-react';
 import { FileExplorer } from './components/FileExplorer';
-import { BottomTabBar } from './components/BottomTabBar';
 import { ImageViewer } from './components/ImageViewer';
 import { SettingsModal } from './components/SettingsModal';
+import { StatusFooter } from './components/StatusFooter';
 import { Toast } from './components/Toast';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { UpdateDialog } from './components/UpdateDialog';
@@ -56,7 +56,7 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState('2.0.2');
+  const [appVersion, setAppVersion] = useState('2.0.3');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress | null>(null);
@@ -139,10 +139,6 @@ export function App() {
     setViewerIndex(index);
     setViewerOpen(true);
   }, []);
-
-  const handleBottomTabSelect = useCallback((index: number) => {
-    handleImageClick(index, images);
-  }, [handleImageClick, images]);
 
   const handleCloseViewer = useCallback(() => setViewerOpen(false), []);
 
@@ -231,29 +227,30 @@ export function App() {
   };
 
   return (
-    <div className={cn('fast-image-app flex h-screen w-screen overflow-hidden text-white', preferences.theme === 'light' ? 'theme-light' : 'theme-dark')} data-theme={preferences.theme}>
-      <div
-        className={cn(
-          'shrink-0 overflow-hidden border-r border-gray-800 transition-all duration-300 ease-in-out',
-          sidebarOpen ? 'w-72' : 'w-0'
-        )}
-      >
-        <FileExplorer
-          folders={folders}
-          selectedFolder={selectedFolder}
-          onSelectFolder={setSelectedFolder}
-          onToggleFolder={toggleFolder}
-          onImageDropToFolder={handleImageDropToFolder}
-          onOpenDirectory={() => void openDirectory()}
-          onOpenFiles={() => void openFiles()}
-          onLoadFiles={processFiles}
-          totalCount={images.length}
-          loading={loading}
-          language={preferences.language}
-        />
-      </div>
+    <div className={cn('fast-image-app flex h-screen w-screen flex-col overflow-hidden text-white', preferences.theme === 'light' ? 'theme-light' : 'theme-dark')} data-theme={preferences.theme}>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div
+          className={cn(
+            'shrink-0 overflow-hidden border-r border-gray-800 transition-all duration-300 ease-in-out',
+            sidebarOpen ? 'w-72' : 'w-0'
+          )}
+        >
+          <FileExplorer
+            folders={folders}
+            selectedFolder={selectedFolder}
+            onSelectFolder={setSelectedFolder}
+            onToggleFolder={toggleFolder}
+            onImageDropToFolder={handleImageDropToFolder}
+            onOpenDirectory={() => void openDirectory()}
+            onOpenFiles={() => void openFiles()}
+            onLoadFiles={processFiles}
+            totalCount={images.length}
+            loading={loading}
+            language={preferences.language}
+          />
+        </div>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0d0d0d]">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0d0d0d]">
         <div
           className="flex items-center justify-between gap-2 border-b border-gray-800 bg-[#1e1e1e] px-3 py-2"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -346,16 +343,16 @@ export function App() {
             />
           )}
         </div>
-        <BottomTabBar
-          images={images}
-          activeImageId={viewerOpen ? viewerImages[viewerIndex]?.id ?? null : null}
-          status={loading ? 'scanning' : 'ready'}
-          language={preferences.language}
-          appVersion={appVersion}
-          onSelectImage={handleBottomTabSelect}
-          onVersionClick={() => setAboutOpen(true)}
-        />
+        </div>
       </div>
+
+      <StatusFooter
+        totalCount={images.length}
+        loading={loading}
+        language={preferences.language}
+        appVersion={appVersion}
+        onVersionClick={() => setAboutOpen(true)}
+      />
 
       {viewerOpen && viewerImages.length > 0 && (
         <ImageViewer
