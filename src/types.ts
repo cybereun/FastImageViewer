@@ -73,6 +73,39 @@ export interface Preferences {
   imageMetadata: Record<string, ImageMetadata>;
 }
 
+export interface UpdateInfo {
+  currentVersion: string;
+  version: string;
+  tagName: string;
+  name: string;
+  notes: string;
+  publishedAt: string | null;
+  assetName: string;
+  downloadUrl: string;
+  size: number | null;
+  digest: string | null;
+}
+
+export type UpdateCheckResult =
+  | { status: 'available'; update: UpdateInfo }
+  | { status: 'up-to-date'; currentVersion: string }
+  | { status: 'development' | 'unsupported' | 'error'; currentVersion?: string; message: string };
+
+export type UpdateDownloadResult =
+  | { status: 'downloaded'; update: UpdateInfo; sha256: string }
+  | { status: 'unsupported' | 'error' | 'development' | 'up-to-date'; message?: string; currentVersion?: string }
+  | { status: 'available'; update: UpdateInfo };
+
+export type UpdateInstallResult =
+  | { status: 'restarting'; version: string }
+  | { status: 'not-ready' | 'unsupported' | 'error'; message: string };
+
+export interface UpdateDownloadProgress {
+  version: string;
+  receivedBytes: number;
+  totalBytes: number;
+}
+
 export interface BatchOperationItem {
   sourcePath: string;
   destinationPath?: string;
@@ -118,6 +151,12 @@ declare global {
       onOpenFolderFromArgs: (callback: (folder: { path: string; name: string; content: DirectoryContent }) => void) => () => void;
       loadPreferences: () => Promise<Preferences>;
       savePreferences: (preferences: Preferences) => Promise<void>;
+      getAppVersion: () => Promise<string>;
+      checkForUpdates: () => Promise<UpdateCheckResult>;
+      downloadUpdate: () => Promise<UpdateDownloadResult>;
+      installUpdate: () => Promise<UpdateInstallResult>;
+      onUpdateAvailable: (callback: (update: UpdateInfo) => void) => () => void;
+      onUpdateDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void;
       minimizeWindow: () => void;
       toggleMaximizeWindow: () => void;
       closeWindow: () => void;

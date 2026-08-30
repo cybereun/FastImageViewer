@@ -17,11 +17,25 @@ const {
     getThumbnailDataUrl,
 } = require('./file-system');
 const { loadPreferences, savePreferences } = require('./preferences');
+const { createUpdateManager } = require('./update-service');
 
 const isDev = !app.isPackaged;
 const directoryWatchers = new Map();
 let mainWindow = null;
 const singleInstanceLock = app.requestSingleInstanceLock();
+const updateManager = createUpdateManager({
+    app,
+    onUpdateAvailable: (update) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('app:update-available', update);
+        }
+    },
+    onDownloadProgress: (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('app:update-download-progress', progress);
+        }
+    },
+});
 
 async function sendLaunchFiles(win, commandLine) {
     const folderCandidate = commandLine
@@ -100,34 +114,43 @@ if (!singleInstanceLock) {
         void sendLaunchFiles(mainWindow, commandLine.slice(1));
     });
 
-    app.whenReady().then(() => {
-    protocol.registerFileProtocol('local', (request, callback) => {
-        try {
-            const parsed = new URL(request.url);
-            let encodedPath = parsed.pathname;
-            if (encodedPath.startsWith('/')) encodedPath = encodedPath.slice(1);
-            const decodedPath = path.normalize(decodeURIComponent(encodedPath));
-            if (!isSupportedImagePath(decodedPath)) {
-                callback({ error: -6 });
-                return;
-            }
-            const stats = fs.statSync(decodedPath);
-            if (!stats.isFile()) {
-                callback({ error: -6 });
-                return;
-            }
-            callback({ path: decodedPath });
-        } catch (error) {
-            console.warn('Local image protocol error:', error.message);
-            callback({ error: -6 });
+    app.whenReady().then(async () => {
+        if (await updateManager.applyPendingUpdate()) {
+            app.quit();
+            return;
         }
-    });
+
+        protocol.registerFileProtocol('local', (request, callback) => {
+            try {
+                const parsed = new URL(request.url);
+                let encodedPath = parsed.pathname;
+                if (encodedPath.startsWith('/')) encodedPath = encodedPath.slice(1);
+                const decodedPath = path.normalize(decodeURIComponent(encodedPath));
+                if (!isSupportedImagePath(decodedPath)) {
+                    callback({ error: -6 });
+                    return;
+                }
+                const stats = fs.statSync(decodedPath);
+                if (!stats.isFile()) {
+                    callback({ error: -6 });
+                    return;
+                }
+                callback({ path: decodedPath });
+            } catch (error) {
+                console.warn('Local image protocol error:', error.message);
+                callback({ error: -6 });
+            }
+        });
 
         createWindow();
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) createWindow();
         });
+
+        setTimeout(() => {
+            void updateManager.checkForUpdates();
+        }, 4500);
     });
 }
 
@@ -239,6 +262,10 @@ ipcMain.handle('fs:stopWatchingDirectory', async (event, watchId) => {
 
 ipcMain.handle('preferences:load', async () => loadPreferences(app.getPath('userData')));
 ipcMain.handle('preferences:save', async (_event, preferences) => savePreferences(app.getPath('userData'), preferences));
+ipcMain.handle('app:getVersion', () => app.getVersion());
+ipcMain.handle('app:checkForUpdates', () => updateManager.checkForUpdates());
+ipcMain.handle('app:downloadUpdate', () => updateManager.downloadUpdate());
+ipcMain.handle('app:installUpdate', () => updateManager.installUpdate());
 
 ipcMain.on('window:minimize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);

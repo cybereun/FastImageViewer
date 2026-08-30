@@ -5,6 +5,9 @@ let openFilesCallback = null;
 let pendingOpenFiles = [];
 let openFolderCallback = null;
 let pendingOpenFolder = null;
+let updateAvailableCallback = null;
+let pendingUpdate = null;
+let updateProgressCallback = null;
 
 ipcRenderer.on('app:open-files', (_event, files) => {
     if (!Array.isArray(files) || files.length === 0) return;
@@ -22,6 +25,19 @@ ipcRenderer.on('app:open-folder', (_event, folder) => {
     } else {
         pendingOpenFolder = folder;
     }
+});
+
+ipcRenderer.on('app:update-available', (_event, update) => {
+    if (!update || typeof update.version !== 'string') return;
+    if (updateAvailableCallback) {
+        updateAvailableCallback(update);
+    } else {
+        pendingUpdate = update;
+    }
+});
+
+ipcRenderer.on('app:update-download-progress', (_event, progress) => {
+    if (updateProgressCallback) updateProgressCallback(progress);
 });
 
 contextBridge.exposeInMainWorld('electron', {
@@ -74,6 +90,27 @@ contextBridge.exposeInMainWorld('electron', {
     },
     loadPreferences: () => ipcRenderer.invoke('preferences:load'),
     savePreferences: (preferences) => ipcRenderer.invoke('preferences:save', preferences),
+    getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+    downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+    installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+    onUpdateAvailable: (callback) => {
+        updateAvailableCallback = callback;
+        if (pendingUpdate) {
+            const update = pendingUpdate;
+            pendingUpdate = null;
+            queueMicrotask(() => updateAvailableCallback?.(update));
+        }
+        return () => {
+            if (updateAvailableCallback === callback) updateAvailableCallback = null;
+        };
+    },
+    onUpdateDownloadProgress: (callback) => {
+        updateProgressCallback = callback;
+        return () => {
+            if (updateProgressCallback === callback) updateProgressCallback = null;
+        };
+    },
     minimizeWindow: () => ipcRenderer.send('window:minimize'),
     toggleMaximizeWindow: () => ipcRenderer.send('window:toggleMaximize'),
     closeWindow: () => ipcRenderer.send('window:close'),

@@ -1,7 +1,7 @@
 {
   "name": "fast-image-viewer",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Fast local-first desktop image browser and organizer",
   "main": "electron/main.js",
   "scripts": {

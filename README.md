@@ -20,6 +20,7 @@ Windows용 로컬 우선 이미지 브라우저·정리 도구입니다. 폴더�
 - 한국어/영어, 다크/라이트 테마, 마우스 휠 동작, 삭제 확인 설정
 - 이미지 파일/폴더 인수 실행과 Windows 파일 연결 설정
 - 진단 정보 복사(이미지 데이터 및 업로드 없음)
+- GitHub Release 확인, 업데이트 알림, SHA-256 검증, 포터블 EXE 자동 교체
 
 ## 기술 구조
 
@@ -60,8 +61,25 @@ npm run electron:build
 
 출력 파일:
 
-- `dist-electron/FastImage-2.0.0-Windows-Portable.exe`
+- `dist-electron/FastImage-2.0.1-Windows-Portable.exe`
 - `dist-electron/win-unpacked/`
+
+## 자동 업데이트
+
+포터블 앱은 실행 후 GitHub의 최신 안정 Release를 확인합니다. 새 버전이 있으면 안내창에서 릴리스 내용과 버전을 보여주며, `지금 업데이트`를 선택하면 HTTPS로 EXE를 다운로드하고 SHA-256을 확인합니다. 다운로드가 끝나면 앱이 자동으로 종료·재시작하면서 새 실행파일로 교체합니다. 다음 실행 때 남아 있는 업데이트도 시작 전에 자동 적용됩니다.
+
+소스 커밋만으로는 실행파일이 만들어지지 않으므로, 새 버전은 반드시 `package.json` 버전을 올리고 같은 버전의 `vX.Y.Z` 태그를 GitHub에 전송해야 합니다.
+
+```bash
+npm test
+npm run typecheck
+git add .
+git commit -m "release: FastImage X.Y.Z"
+git tag vX.Y.Z
+git push origin main --tags
+```
+
+`.github/workflows/release.yml`이 태그를 받아 Windows 포터블 EXE를 빌드하고 GitHub Release에 업로드합니다. 인터넷이 없거나 GitHub Release에 해당 버전의 포터블 EXE가 없으면 업데이트하지 않고 현재 버전을 유지합니다.
 
 ## FastImage 2.0 작업 기록
 
@@ -72,6 +90,7 @@ npm run electron:build
 ## 릴리스 버전 히스토리
 
 - [`v2.0.0`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0) — 로컬 이미지 컬렉션, 안전한 일괄 파일 작업, 썸네일 캐시, 필터/메타데이터, 뷰어·편집기·설정 개선
+- `v2.0.1` — GitHub Release 기반 업데이트 확인, 알림, 다운로드·SHA-256 검증, 포터블 EXE 자동 교체
 - `v1.0.0` — 폴더 탐색, 썸네일 그리드, 이미지 뷰어, 기본 편집기, 파일 작업
 
 ## 알려진 제한
@@ -81,6 +100,7 @@ npm run electron:build
 - 편집 저장은 EXIF/ICC 등 원본 메타데이터를 보존하지 않을 수 있습니다.
 - 원본 덮어쓰기는 형식 불일치로 인한 파일 손상을 막기 위해 동일 MIME 형식에서만 활성화됩니다.
 - 코드 서명이 없는 포터블 파일은 첫 실행 시 Windows SmartScreen 경고가 표시될 수 있습니다.
+- 자동 업데이트는 현재 Windows 포터블 빌드와 공개 GitHub Release만 지원합니다.
 
 ## 라이선스
 

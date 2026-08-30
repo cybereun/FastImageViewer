@@ -1,0 +1,62 @@
+name: Build and publish Windows release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify source
+        run: |
+          npm test
+          npm run typecheck
+          npm run build
+
+      - name: Build portable Windows app
+        run: npm run electron:build
+
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $refType = '${{ github.ref_type }}'
+          $tagVersion = if ($refType -eq 'tag') { '${{ github.ref_name }}'.TrimStart('v') } else { '' }
+          if ($tagVersion -and $tagVersion -ne $packageVersion) {
+            throw "Git tag $tagVersion does not match package.json version $packageVersion."
+          }
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $asset = Get-ChildItem -LiteralPath dist-electron -Filter 'FastImage-*-Windows-Portable.exe' | Sort-Object LastWriteTime | Select-Object -Last 1
+          if (-not $asset) { throw 'Portable FastImage executable was not created.' }
+          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { '' }
+          if (-not $tag) { $tag = "v$((Get-Content package.json -Raw | ConvertFrom-Json).version)" }
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag $asset.FullName --repo $env:GITHUB_REPOSITORY --title "FastImage $tag" --notes-file CHANGELOG.md
+          } else {
+            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY --clobber
+          }

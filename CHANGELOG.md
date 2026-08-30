@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.0.1] - 2026-08-30
+
+### Added
+
+- GitHub Release 기반 시작 시 업데이트 확인 및 업데이트 안내창
+- 포터블 EXE 다운로드 진행률 표시, SHA-256 검증, 다음 실행 시 자동 설치
+- `vX.Y.Z` 태그 push 후 Windows 실행파일을 빌드·업로드하는 GitHub Actions workflow
+- 업데이트 버전 비교·릴리스 자산 선택·digest 파싱 단위 테스트
+
+### Security and reliability
+
+- 고정된 GitHub 저장소의 HTTPS Release API와 정확한 포터블 EXE 이름만 사용
+- 다운로드 파일을 사용자 데이터의 임시 영역에 저장하고 검증 후에만 설치 예약
+- 현재 실행파일은 별도 PowerShell 교체 도우미가 프로세스 종료를 기다린 후 교체
+
 ## [2.0.0] - 2026-08-30
 
 ### Added

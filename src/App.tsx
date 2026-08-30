@@ -16,8 +16,9 @@ import { ImageViewer } from './components/ImageViewer';
 import { SettingsModal } from './components/SettingsModal';
 import { Toast } from './components/Toast';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
+import { UpdateDialog } from './components/UpdateDialog';
 import { useImageStore } from './hooks/useImageStore';
-import type { ImageFile } from './types';
+import type { ImageFile, UpdateCheckResult, UpdateDownloadProgress, UpdateInfo } from './types';
 import { cn } from './utils/cn';
 import { t } from './i18n';
 
@@ -54,6 +55,34 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState('2.0.1');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress | null>(null);
+  const [updateAction, setUpdateAction] = useState<'idle' | 'downloading' | 'installing' | 'error'>('idle');
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void window.electron.getAppVersion().then((version) => {
+      if (active) setAppVersion(version);
+    }).catch(() => undefined);
+    const unsubscribeAvailable = window.electron.onUpdateAvailable((update) => {
+      setUpdateInfo(update);
+      setUpdateProgress(null);
+      setUpdateAction('idle');
+      setUpdateError(null);
+      setUpdateDialogOpen(true);
+    });
+    const unsubscribeProgress = window.electron.onUpdateDownloadProgress((progress) => {
+      setUpdateProgress(progress);
+    });
+    return () => {
+      active = false;
+      unsubscribeAvailable();
+      unsubscribeProgress();
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = preferences.language;
@@ -136,7 +165,7 @@ export function App() {
 
   const copyDiagnostics = useCallback(async () => {
     const report = [
-      'FastImage 2.0.0',
+      `FastImage ${appVersion}`,
       `Platform: ${window.navigator.platform}`,
       `Collection: ${collectionKind}`,
       `Visible items: ${images.length}`,
@@ -147,7 +176,48 @@ export function App() {
     } catch {
       setNotice('Unable to copy diagnostics.');
     }
-  }, [collectionKind, images.length, preferences.language]);
+  }, [appVersion, collectionKind, images.length, preferences.language]);
+
+  const handleCheckForUpdates = useCallback(async () => {
+    setUpdateError(null);
+    const result: UpdateCheckResult = await window.electron.checkForUpdates();
+    if (result.status === 'available') {
+      setUpdateInfo(result.update);
+      setUpdateProgress(null);
+      setUpdateAction('idle');
+      setUpdateDialogOpen(true);
+      return;
+    }
+    if (result.status === 'up-to-date') {
+      setNotice(t(preferences.language, 'upToDate'));
+      return;
+    }
+    setNotice(result.status === 'development'
+      ? t(preferences.language, 'updateDevelopment')
+      : result.status === 'unsupported'
+        ? t(preferences.language, 'updateUnsupported')
+        : `${t(preferences.language, 'updateCheckFailed')} ${result.message}`);
+  }, [preferences.language]);
+
+  const handleUpdateNow = useCallback(async () => {
+    if (!updateInfo) return;
+    setUpdateAction('downloading');
+    setUpdateProgress(null);
+    setUpdateError(null);
+    const downloadResult = await window.electron.downloadUpdate();
+    if (downloadResult.status !== 'downloaded') {
+      setUpdateAction('error');
+      const message = 'message' in downloadResult ? downloadResult.message : undefined;
+      setUpdateError(message ?? t(preferences.language, 'updateCheckFailed'));
+      return;
+    }
+    setUpdateAction('installing');
+    const installResult = await window.electron.installUpdate();
+    if (installResult.status !== 'restarting') {
+      setUpdateAction('error');
+      setUpdateError(installResult.message);
+    }
+  }, [preferences.language, updateInfo]);
 
   const viewPreferences = {
     viewSize: preferences.viewSize,
@@ -289,7 +359,7 @@ export function App() {
           <section className="w-[760px] max-w-full rounded-xl border border-gray-700 bg-[#1a1a1a] p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="about-title" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="about-title" className="text-lg font-semibold text-white">FastImage 2.0.0</h2>
+                <h2 id="about-title" className="text-lg font-semibold text-white">FastImage {appVersion}</h2>
                 <p className="mt-1 text-sm text-gray-400">개발자: 은준욱</p>
               </div>
               <button onClick={() => setAboutOpen(false)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white" title="Close" aria-label="Close about">
@@ -308,12 +378,27 @@ export function App() {
               <button onClick={() => void copyDiagnostics()} className="mt-4 rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800">
                 Copy diagnostics (no image data)
               </button>
+              <button onClick={() => void handleCheckForUpdates()} className="mt-4 ml-2 rounded-md border border-blue-700/60 px-3 py-1.5 text-xs text-blue-200 hover:bg-blue-950/40">
+                {t(preferences.language, 'updateCheck')}
+              </button>
             </div>
           </section>
         </div>
       )}
 
       {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreferences} onClose={() => setSettingsOpen(false)} />}
+      {updateDialogOpen && updateInfo && (
+        <UpdateDialog
+          language={preferences.language}
+          update={updateInfo}
+          currentVersion={appVersion}
+          action={updateAction}
+          progress={updateProgress}
+          error={updateError}
+          onUpdate={() => void handleUpdateNow()}
+          onClose={() => setUpdateDialogOpen(false)}
+        />
+      )}
       <Toast message={notice} />
     </div>
   );
