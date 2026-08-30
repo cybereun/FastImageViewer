@@ -18,11 +18,6 @@ Windows용 로컬 우선 이미지 브라우저·정리 도구입니다. 폴더�
 라이선스: [MIT License](LICENSE)<br />
 문의: [cybereunny@gmail.com](mailto:cybereunny@gmail.com)
 
-## FastImage 프로모션 사이트
-
-다운로드와 기능 소개를 한 화면에서 제공하는 밝은 홍보 사이트는 [FastImage-Web](https://github.com/cybereun/FastImage-Web)에
-있습니다. 저장소 README의 로컬 서버 명령으로 미리 볼 수 있으며, 사이트의 개발자
-표기는 사용자가 요청한 브랜드명인 **Lebi_Cybereun**으로 구성했습니다.
 
 ## 주요 기능
 
