@@ -64,6 +64,40 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const THUMBNAIL_SIZE = 320;
+const MAX_RENDERER_THUMBNAILS = 400;
+const thumbnailCache = new Map<string, string>();
+const thumbnailRequests = new Map<string, Promise<string>>();
+
+function thumbnailCacheKey(image: ImageFile): string {
+  return `${image.path}|${image.lastModified}|${THUMBNAIL_SIZE}`;
+}
+
+function requestThumbnail(image: ImageFile): Promise<string> {
+  const key = thumbnailCacheKey(image);
+  const cached = thumbnailCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = thumbnailRequests.get(key);
+  if (pending) return pending;
+
+  const request = window.electron.getThumbnailUrl(image.path, THUMBNAIL_SIZE)
+    .then((url) => {
+      thumbnailCache.set(key, url);
+      while (thumbnailCache.size > MAX_RENDERER_THUMBNAILS) {
+        const oldestKey = thumbnailCache.keys().next().value;
+        if (!oldestKey) break;
+        thumbnailCache.delete(oldestKey);
+      }
+      return url;
+    })
+    .finally(() => {
+      thumbnailRequests.delete(key);
+    });
+  thumbnailRequests.set(key, request);
+  return request;
+}
+
 function isEditableElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -99,21 +133,37 @@ function ThumbnailItem({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(image.thumbnailUrl ?? null);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const thumbnailRef = useRef<HTMLDivElement | null>(null);
+  const generatedThumbnail = image.source !== 'import' && Boolean(image.path) && !image.thumbnailUrl;
 
   useEffect(() => {
-    if (image.source === 'import' || !image.path || image.thumbnailUrl) return;
+    if (!generatedThumbnail) {
+      setThumbnailUrl(image.thumbnailUrl ?? null);
+      setThumbnailFailed(false);
+      return;
+    }
     const node = thumbnailRef.current;
     if (!node) return;
     let active = true;
     let observer: IntersectionObserver | null = null;
+    const cached = thumbnailCache.get(thumbnailCacheKey(image));
+    if (cached) {
+      setThumbnailUrl(cached);
+      return () => undefined;
+    }
+    setThumbnailUrl(null);
+    setThumbnailFailed(false);
+    setError(false);
+    setLoaded(false);
     const loadThumbnail = () => {
-      void window.electron
-        .getThumbnailUrl(image.path, 320)
+      void requestThumbnail(image)
         .then((url) => {
           if (active) setThumbnailUrl(url);
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (active) setThumbnailFailed(true);
+        });
     };
     if ('IntersectionObserver' in window) {
       observer = new IntersectionObserver((entries) => {
@@ -130,7 +180,11 @@ function ThumbnailItem({
       active = false;
       observer?.disconnect();
     };
-  }, [image.path, image.source, image.thumbnailUrl]);
+  }, [generatedThumbnail, image.lastModified, image.path, image.source, image.thumbnailUrl]);
+
+  const imageUrl = generatedThumbnail
+    ? (thumbnailFailed ? image.url : thumbnailUrl)
+    : (image.thumbnailUrl ?? image.url);
 
   const sizeClasses = {
     small: 'h-28',
@@ -153,7 +207,7 @@ function ThumbnailItem({
         dimmedForCut && 'opacity-50',
         disabled && 'cursor-wait opacity-70'
       )}
-      title="Click select, Ctrl+Click multi-select, Double-click open. Keyboard: F2/Ctrl+C/X/V/Arrows/Enter/Delete/Esc"
+      title="Click to select. Double-click to open."
     >
       <div ref={thumbnailRef} className={cn('relative w-full overflow-hidden bg-gray-900', sizeClasses[viewSize])}>
         {!loaded && !error && (
@@ -165,22 +219,27 @@ function ThumbnailItem({
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">
             <ImageIcon size={32} />
           </div>
-        ) : (
+        ) : imageUrl ? (
           <img
-            src={thumbnailUrl || image.url}
+            src={imageUrl}
             alt={image.name}
-            loading="lazy"
+            loading={generatedThumbnail && !thumbnailFailed ? 'eager' : 'lazy'}
+            decoding="async"
             className={cn(
               'h-full w-full object-cover transition-transform duration-200 group-hover:scale-105',
               !loaded && 'opacity-0'
             )}
             onLoad={() => setLoaded(true)}
             onError={() => {
-              if (thumbnailUrl) setThumbnailUrl(null);
-              else setError(true);
+              if (generatedThumbnail && !thumbnailFailed) {
+                setThumbnailFailed(true);
+                setLoaded(false);
+                return;
+              }
+              setError(true);
             }}
           />
-        )}
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="absolute bottom-0 left-0 right-0 translate-y-full p-2 transition-transform group-hover:translate-y-0">
           <p className="text-xs text-gray-300">{formatSize(image.size)}</p>
@@ -882,11 +941,11 @@ export function ThumbnailGrid({
         }}
       />
 
-      <div className="border-b border-gray-800 bg-gray-900/60 px-4 py-1 text-xs text-gray-400">
-        {clipboard
-          ? `Clipboard: ${clipboard.items.length} image(s) ${clipboard.mode === 'copy' ? 'copied' : 'cut'}`
-            : 'Keyboard: Shift range | Ctrl+A select all | F2 Rename | Ctrl+C/X/V | Enter Open | Delete | Esc'}
-      </div>
+      {clipboard && (
+        <div className="border-b border-gray-800 bg-gray-900/60 px-4 py-1 text-xs text-gray-400">
+          Clipboard: {clipboard.items.length} image(s) {clipboard.mode === 'copy' ? 'copied' : 'cut'}
+        </div>
+      )}
 
       {statusMessage && (
         <div className="border-b border-blue-900/50 bg-blue-950/40 px-4 py-1.5 text-xs text-blue-200">

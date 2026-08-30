@@ -9,6 +9,17 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ preferences, onChange, onClose }: SettingsModalProps) {
+  const keyboardShortcuts = [
+    { key: 'Shift', label: t(preferences.language, 'keyboardRangeSelect') },
+    { key: 'Ctrl+A', label: t(preferences.language, 'keyboardSelectAll') },
+    { key: 'F2', label: t(preferences.language, 'keyboardRename') },
+    { key: 'Ctrl+C / X / V', label: t(preferences.language, 'keyboardClipboard') },
+    { key: 'Enter', label: t(preferences.language, 'keyboardOpen') },
+    { key: 'Delete', label: t(preferences.language, 'keyboardDelete') },
+    { key: 'Esc', label: t(preferences.language, 'keyboardCancel') },
+    { key: '← ↑ ↓ →', label: t(preferences.language, 'keyboardNavigate') },
+  ];
+
   return (
     <div
       className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-4"
@@ -74,6 +85,22 @@ export function SettingsModal({ preferences, onChange, onClose }: SettingsModalP
               className="h-4 w-4 accent-blue-500"
             />
           </label>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-3" role="region" aria-labelledby="keyboard-shortcuts-title">
+            <h3 id="keyboard-shortcuts-title" className="text-sm font-medium text-gray-200">
+              {t(preferences.language, 'keyboardShortcuts')}
+            </h3>
+            <div className="mt-3 grid grid-cols-[max-content_1fr] items-center gap-x-3 gap-y-2 text-xs text-gray-400">
+              {keyboardShortcuts.map((shortcut) => (
+                <div key={shortcut.key} className="contents">
+                  <kbd className="rounded border border-gray-600 bg-gray-800 px-1.5 py-0.5 font-mono text-[11px] text-gray-200">
+                    {shortcut.key}
+                  </kbd>
+                  <span>{shortcut.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 text-xs text-gray-400">
             Default folder is updated automatically when you open or select a folder.

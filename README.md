@@ -62,7 +62,7 @@ npm run electron:build
 
 출력 파일:
 
-- `dist-electron/FastImage-2.0.4-Windows-Portable.exe`
+- `dist-electron/FastImage-2.0.5-Windows-Portable.exe`
 - `dist-electron/win-unpacked/`
 
 ## 자동 업데이트
@@ -95,6 +95,7 @@ git push origin main --tags
 - [`v2.0.2`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.2) — 하단 이미지 탭 UI와 초기 버전 표시
 - [`v2.0.3`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.3) — 왼쪽 탐색창 상태 표시와 같은 디자인의 통합 하단 푸터, 우측 버전 표시
 - [`v2.0.4`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.4) — 업데이트 설치 후 앱 자동 종료·재시작, 다운로드 진행 용량 표시 및 설치 상태 개선
+- [`v2.0.5`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.5) — 키보드 단축키 안내를 설정창으로 이동하고 썸네일 중복 원본 로딩 제거 및 캐시 개선
 - `v1.0.0` — 폴더 탐색, 썸네일 그리드, 이미지 뷰어, 기본 편집기, 파일 작업
 
 ## 알려진 제한

@@ -1,4 +1,4 @@
-# FastImage 2.0/2.0.1/2.0.2/2.0.3/2.0.4 Verification Record
+# FastImage 2.0/2.0.1/2.0.2/2.0.3/2.0.4/2.0.5 Verification Record
 
 검증 기준일: 2026-08-30  
 작업 checkout: `L:\Codex-L\fast-image`
@@ -21,9 +21,8 @@
 
 ## 배포 산출물
 
-- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.4-Windows-Portable.exe`
-- 크기: 75,648,730 bytes
-- SHA-256: `D11C95C4371D088804F0A39DFAE2328127D56164F3F605FB912412003D65579E`
+- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.5-Windows-Portable.exe`
+- 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -69,3 +68,4 @@
 - `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
 - `v2.0.3` CI 자산은 GitHub Release에서 내려받아 L:에 반영했고, Y: 실행파일도 동일 SHA-256으로 동기화했습니다.
 - `v2.0.4` 업데이트 설치 회귀 테스트는 설치 도우미 예약 후 앱 종료 호출을 확인했고, CI 자산은 L:/Y:에 동기화했습니다.
+- `v2.0.5`는 썸네일 창의 키보드 안내를 설정창으로 이동하고, 생성 썸네일 준비 전 원본 중복 로딩을 차단하는 변경을 포함합니다.
