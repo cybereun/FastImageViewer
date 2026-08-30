@@ -20,7 +20,7 @@ Contact: [cybereunny@gmail.com](mailto:cybereunny@gmail.com)
 
 ## FastImage promo site
 
-The bright, static product site in [website/](website/) introduces FastImage and provides direct downloads for the available Windows releases. See [website/README.md](website/README.md) for local preview and validation commands.
+The bright, static product site in [FastImage-Web](https://github.com/cybereun/FastImage-Web) introduces FastImage and provides direct downloads for the available Windows releases. See the repository README for local preview and validation commands.
 
 ## Features
 
