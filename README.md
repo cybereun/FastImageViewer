@@ -92,7 +92,7 @@ git push origin main --tags
 
 - [`v2.0.0`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0) — 로컬 이미지 컬렉션, 안전한 일괄 파일 작업, 썸네일 캐시, 필터/메타데이터, 뷰어·편집기·설정 개선
 - [`v2.0.1`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.1) — GitHub Release 기반 업데이트 확인, 알림, 다운로드·SHA-256 검증, 포터블 EXE 자동 교체
-- `v2.0.2` — 하단 전체 이미지 가로 탭, 현재 이미지 활성 표시, 우측 버전 표시
+- [`v2.0.2`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.2) — 하단 전체 이미지 가로 탭, 현재 이미지 활성 표시, 우측 버전 표시
 - `v1.0.0` — 폴더 탐색, 썸네일 그리드, 이미지 뷰어, 기본 편집기, 파일 작업
 
 ## 알려진 제한

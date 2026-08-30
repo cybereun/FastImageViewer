@@ -22,8 +22,8 @@
 ## 배포 산출물
 
 - 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.2-Windows-Portable.exe`
-- 크기: 75,651,449 bytes
-- SHA-256: `D15438F34AC6A5FEAD7A707409C751A8BB4AF2F6290472E0C5C6C90489FD4E39`
+- 크기: 75,649,853 bytes
+- SHA-256: `7B0EE0CBD49F7E4C3F5CD7CF34206A3A29F16CF7B3B08892B5C065BEA818862F`
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -67,3 +67,4 @@
 - 같은 검증된 소스·문서·실행파일을 Y: checkout에 복사했습니다.
 - `v2.0.1` 업데이트 자산은 GitHub API에서 `uploaded` 상태와 SHA-256 digest를 확인했고, Y: 실행파일 해시도 L:과 일치했습니다.
 - `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
+- `v2.0.2` CI 자산은 GitHub Release에서 내려받아 L:에 반영했으며, 이후 Y: 실행파일도 동일 해시로 동기화합니다.
