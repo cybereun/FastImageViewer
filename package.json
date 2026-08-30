@@ -1,7 +1,7 @@
 {
   "name": "fast-image-viewer",
   "private": true,
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Fast local-first desktop image browser and organizer",
   "main": "electron/main.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && cross-env ELECTRON_BUILDER_COMPRESSION_LEVEL=1 electron-builder"
   },
   "author": "Antigravity",
   "license": "MIT",
@@ -55,8 +55,28 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "target": "portable",
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
       "artifactName": "FastImage-${version}-Windows-Portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FastImage",
+      "runAfterFinish": true,
+      "useZip": true,
+      "artifactName": "FastImage-${version}-Windows-Setup.${ext}"
     },
     "fileAssociations": [
       {

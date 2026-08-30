@@ -1,4 +1,4 @@
-# FastImage 2.0/2.0.1/2.0.2/2.0.3/2.0.4/2.0.5 Verification Record
+# FastImage 2.0/2.0.1/2.0.2/2.0.3/2.0.4/2.0.5/2.0.6 Verification Record
 
 검증 기준일: 2026-08-30  
 작업 checkout: `L:\Codex-L\fast-image`
@@ -17,21 +17,22 @@
 | `node --check electron/update-utils.js` | exit 0 |
 | `node --check electron/update-service.js` | exit 0 |
 | `npm run build` | exit 0 — Vite production bundle generated |
-| `npm run electron:build` | portable artifact generated successfully |
+| `npm run electron:build` | portable 및 NSIS installer artifact generated successfully |
 
 ## 배포 산출물
 
-- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.5-Windows-Portable.exe`
-- 크기: 75,649,812 bytes
-- SHA-256: `00EF9909B6A5B8DA6AC866173429A557E2BAAE9E94444F24A50C135B56EC63C6`
+- 포터블 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.6-Windows-Portable.exe`
+- 포터블 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
+- 설치파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.6-Windows-Setup.exe`
+- 설치파일 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
 
 - `electron/update-utils.test.mjs`에서 SemVer 비교, 포터블 자산 정확 매칭, SHA-256 digest 파싱을 검증했습니다.
-- 앱은 고정된 GitHub 저장소의 최신 안정 Release에서 `FastImage-X.Y.Z-Windows-Portable.exe`만 선택합니다.
+- 앱은 고정된 GitHub 저장소의 최신 안정 Release에서 포터블 실행 중이면 `FastImage-X.Y.Z-Windows-Portable.exe`, 설치형이면 `FastImage-X.Y.Z-Windows-Setup.exe`를 선택합니다.
 - 다운로드 파일은 사용자 데이터의 `updates` 임시 영역에 저장하고, 크기·SHA-256 검증이 끝난 뒤 다음 실행용 manifest를 기록합니다.
-- 실행 중인 포터블 EXE는 PowerShell 교체 도우미가 프로세스 종료를 기다린 뒤 교체하고 새 EXE를 재실행합니다.
+- 실행 중인 포터블 EXE는 PowerShell 교체 도우미가 프로세스 종료를 기다린 뒤 교체하고 새 EXE를 재실행합니다. 설치형 앱은 검증된 Setup 설치파일을 자동 실행합니다.
 - `.github/workflows/release.yml`은 `vX.Y.Z` 태그 push 시 Windows 빌드·테스트·GitHub Release 업로드를 수행합니다.
 
 ## 수동 확인 체크리스트
@@ -56,6 +57,7 @@
 - [ ] 새 GitHub Release가 있을 때 시작 후 업데이트 안내창 표시
 - [ ] 업데이트 안내창에서 릴리스 내용·버전·다운로드 진행률 표시
 - [ ] 다운로드 완료 후 SHA-256 검증 및 앱 재시작·포터블 EXE 교체
+- [ ] Windows Setup 설치 후 바탕화면·시작 메뉴 바로가기 생성
 - [ ] 인터넷 오류, 잘못된 자산, 동일 버전 Release에서 현재 앱 유지
 - [ ] EXE에 이미지 파일을 연결해 실행했을 때 파일 열기
 
@@ -71,3 +73,4 @@
 - `v2.0.3` CI 자산은 GitHub Release에서 내려받아 L:에 반영했고, Y: 실행파일도 동일 SHA-256으로 동기화했습니다.
 - `v2.0.4` 업데이트 설치 회귀 테스트는 설치 도우미 예약 후 앱 종료 호출을 확인했고, CI 자산은 L:/Y:에 동기화했습니다.
 - `v2.0.5`는 썸네일 창의 키보드 안내를 설정창으로 이동하고, 생성 썸네일 준비 전 원본 중복 로딩을 차단하는 변경을 포함합니다.
+- `v2.0.6`는 포터블·NSIS 설치파일을 함께 빌드하고 배포 방식별 자동 업데이트 자산을 선택하도록 개선했습니다.

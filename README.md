@@ -54,7 +54,7 @@ npm run typecheck
 npm run build
 ```
 
-## Windows 포터블 빌드
+## Windows 배포 빌드
 
 ```bash
 npm run electron:build
@@ -62,12 +62,15 @@ npm run electron:build
 
 출력 파일:
 
-- `dist-electron/FastImage-2.0.5-Windows-Portable.exe`
+- `dist-electron/FastImage-2.0.6-Windows-Portable.exe`
+- `dist-electron/FastImage-2.0.6-Windows-Setup.exe`
 - `dist-electron/win-unpacked/`
+
+`Windows-Portable.exe`는 설치 없이 실행하는 버전입니다. `Windows-Setup.exe`는 사용자별 설치 방식이며 설치 과정에서 바탕화면과 시작 메뉴에 FastImage 바로가기를 만듭니다.
 
 ## 자동 업데이트
 
-포터블 앱은 실행 후 GitHub의 최신 안정 Release를 확인합니다. 새 버전이 있으면 안내창에서 릴리스 내용과 버전을 보여주며, `지금 업데이트`를 선택하면 HTTPS로 EXE를 다운로드하고 SHA-256을 확인합니다. 다운로드가 끝나면 앱이 자동으로 종료·재시작하면서 새 실행파일로 교체합니다. 다음 실행 때 남아 있는 업데이트도 시작 전에 자동 적용됩니다.
+포터블 앱과 설치형 앱은 실행 후 GitHub의 최신 안정 Release를 확인합니다. 새 버전이 있으면 안내창에서 릴리스 내용과 버전을 보여주며, `지금 업데이트`를 선택하면 사용 중인 배포 방식에 맞는 EXE를 HTTPS로 다운로드하고 SHA-256을 확인합니다. 포터블 앱은 실행파일을 교체하고, 설치형 앱은 Setup 설치파일을 자동 실행해 업데이트합니다. 다운로드가 끝나면 앱이 자동으로 종료·재시작합니다.
 
 소스 커밋만으로는 실행파일이 만들어지지 않으므로, 새 버전은 반드시 `package.json` 버전을 올리고 같은 버전의 `vX.Y.Z` 태그를 GitHub에 전송해야 합니다.
 
@@ -80,7 +83,7 @@ git tag vX.Y.Z
 git push origin main --tags
 ```
 
-`.github/workflows/release.yml`이 태그를 받아 Windows 포터블 EXE를 빌드하고 GitHub Release에 업로드합니다. 인터넷이 없거나 GitHub Release에 해당 버전의 포터블 EXE가 없으면 업데이트하지 않고 현재 버전을 유지합니다.
+`.github/workflows/release.yml`이 태그를 받아 Windows 포터블 EXE와 설치형 Setup EXE를 빌드하고 GitHub Release에 업로드합니다. 인터넷이 없거나 GitHub Release에 현재 배포 방식에 맞는 자산이 없으면 업데이트하지 않고 현재 버전을 유지합니다.
 
 ## FastImage 2.0 작업 기록
 
@@ -96,6 +99,7 @@ git push origin main --tags
 - [`v2.0.3`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.3) — 왼쪽 탐색창 상태 표시와 같은 디자인의 통합 하단 푸터, 우측 버전 표시
 - [`v2.0.4`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.4) — 업데이트 설치 후 앱 자동 종료·재시작, 다운로드 진행 용량 표시 및 설치 상태 개선
 - [`v2.0.5`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.5) — 키보드 단축키 안내를 설정창으로 이동하고 썸네일 중복 원본 로딩 제거 및 캐시 개선
+- [`v2.0.6`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.6) — Windows 설치파일 추가, 바탕화면·시작 메뉴 바로가기 생성, 설치형 업데이트 지원
 - `v1.0.0` — 폴더 탐색, 썸네일 그리드, 이미지 뷰어, 기본 편집기, 파일 작업
 
 ## 알려진 제한
@@ -105,7 +109,7 @@ git push origin main --tags
 - 편집 저장은 EXIF/ICC 등 원본 메타데이터를 보존하지 않을 수 있습니다.
 - 원본 덮어쓰기는 형식 불일치로 인한 파일 손상을 막기 위해 동일 MIME 형식에서만 활성화됩니다.
 - 코드 서명이 없는 포터블 파일은 첫 실행 시 Windows SmartScreen 경고가 표시될 수 있습니다.
-- 자동 업데이트는 현재 Windows 포터블 빌드와 공개 GitHub Release만 지원합니다.
+- 자동 업데이트는 Windows 포터블/설치형 빌드와 공개 GitHub Release만 지원합니다.
 
 ## 라이선스
 

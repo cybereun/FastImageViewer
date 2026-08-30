@@ -3,6 +3,7 @@ import {
   buildUpdateInfo,
   compareVersions,
   getPortableAssetName,
+  getInstallerAssetName,
   normalizeVersion,
   parseSha256Digest,
   selectReleaseAsset,
@@ -43,5 +44,24 @@ describe('update version rules', () => {
       downloadUrl: 'https://example.com/update.exe',
     });
     expect(buildUpdateInfo(release, '2.0.1')).toBeNull();
+  });
+
+  it('selects the installer asset for installed builds', () => {
+    const release = {
+      tag_name: 'v2.0.6',
+      name: 'FastImage 2.0.6',
+      body: 'Installer release',
+      assets: [
+        { name: 'FastImage-2.0.6-Windows-Portable.exe', browser_download_url: 'https://example.com/portable.exe', size: 42 },
+        { name: 'FastImage-2.0.6-Windows-Setup.exe', browser_download_url: 'https://example.com/setup.exe', size: 43 },
+      ],
+    };
+    expect(getInstallerAssetName('v2.0.6')).toBe('FastImage-2.0.6-Windows-Setup.exe');
+    expect(selectReleaseAsset(release, '2.0.6', 'installer')?.name).toBe('FastImage-2.0.6-Windows-Setup.exe');
+    expect(buildUpdateInfo(release, '2.0.5', 'installer')).toMatchObject({
+      version: '2.0.6',
+      assetName: 'FastImage-2.0.6-Windows-Setup.exe',
+      downloadUrl: 'https://example.com/setup.exe',
+    });
   });
 });

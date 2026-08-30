@@ -72,6 +72,45 @@ finally {
 }
 `;
 
+const NSIS_INSTALLER_SCRIPT = String.raw`param(
+    [int] $ProcessId,
+    [string] $SourcePath,
+    [string] $PendingPath,
+    [string] $ScriptPath
+)
+
+$ErrorActionPreference = 'Stop'
+
+try {
+    for ($attempt = 0; $attempt -lt 240; $attempt += 1) {
+        if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) { break }
+        Start-Sleep -Milliseconds 250
+    }
+
+    if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
+        throw 'FastImage did not exit before the update timeout.'
+    }
+
+    $installer = Start-Process -FilePath $SourcePath -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden
+    if ($installer.ExitCode -ne 0) {
+        throw "FastImage installer exited with code $($installer.ExitCode)."
+    }
+
+    if (Test-Path -LiteralPath $SourcePath) {
+        Remove-Item -LiteralPath $SourcePath -Force
+    }
+    if (Test-Path -LiteralPath $PendingPath) {
+        Remove-Item -LiteralPath $PendingPath -Force
+    }
+}
+catch {
+    # Keep the staged installer and manifest so the next launch can retry safely.
+}
+finally {
+    Remove-Item -LiteralPath $ScriptPath -Force -ErrorAction SilentlyContinue
+}
+`;
+
 function toErrorMessage(error) {
     if (!error) return 'Unknown update error.';
     if (typeof error.message === 'string' && error.message.trim()) return error.message.trim();
@@ -252,6 +291,12 @@ function getPortableExecutablePath() {
     return path.resolve(candidate);
 }
 
+function isPortableBuild() {
+    return process.platform === 'win32'
+        && typeof process.env.PORTABLE_EXECUTABLE_FILE === 'string'
+        && process.env.PORTABLE_EXECUTABLE_FILE.trim().length > 0;
+}
+
 function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawnInstaller: spawnInstallerOverride } = {}) {
     let latestUpdate = null;
     let downloadInFlight = null;
@@ -259,6 +304,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
 
     const getCurrentVersion = () => String(app.getVersion());
     const isSupported = () => Boolean(app.isPackaged && process.platform === 'win32');
+    const getDistribution = () => (isPortableBuild() ? 'portable' : 'installer');
     const getUpdatesDirectory = () => path.join(app.getPath('userData'), 'updates');
     const getPendingManifestPath = () => path.join(getUpdatesDirectory(), 'pending-update.json');
 
@@ -312,7 +358,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
 
         try {
             const release = await requestJson(RELEASE_API_URL);
-            const update = buildUpdateInfo(release, currentVersion);
+            const update = buildUpdateInfo(release, currentVersion, getDistribution());
             if (!update) {
                 latestUpdate = null;
                 return { status: 'up-to-date', currentVersion };
@@ -384,12 +430,29 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         return downloadInFlight;
     }
 
-    async function spawnInstaller(manifest, targetPath) {
+    async function spawnInstaller(manifest, targetPath, distribution = 'portable') {
         const updatesDirectory = getUpdatesDirectory();
         await fs.promises.mkdir(updatesDirectory, { recursive: true });
         const scriptPath = path.join(updatesDirectory, `.install-update-${process.pid}-${Date.now()}.ps1`);
-        await fs.promises.writeFile(scriptPath, INSTALLER_SCRIPT, 'utf8');
+        const installerScript = distribution === 'installer' ? NSIS_INSTALLER_SCRIPT : INSTALLER_SCRIPT;
+        await fs.promises.writeFile(scriptPath, installerScript, 'utf8');
         const powershellPath = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        const scriptArguments = distribution === 'installer'
+            ? [
+                scriptPath,
+                String(process.pid),
+                manifest.stagedPath,
+                getPendingManifestPath(),
+                scriptPath,
+            ]
+            : [
+                scriptPath,
+                String(process.pid),
+                manifest.stagedPath,
+                targetPath,
+                getPendingManifestPath(),
+                scriptPath,
+            ];
         const child = spawn(powershellPath, [
             '-NoLogo',
             '-NoProfile',
@@ -397,12 +460,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
             '-ExecutionPolicy',
             'Bypass',
             '-File',
-            scriptPath,
-            String(process.pid),
-            manifest.stagedPath,
-            targetPath,
-            getPendingManifestPath(),
-            scriptPath,
+            ...scriptArguments,
         ], {
             detached: true,
             stdio: 'ignore',
@@ -424,12 +482,13 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         }
         const validation = await validateStagedUpdate(manifest);
         if (!validation.ok) return { status: 'error', message: validation.message };
-        const targetPath = getPortableExecutablePath();
-        if (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath)) {
+        const distribution = getDistribution();
+        const targetPath = distribution === 'portable' ? getPortableExecutablePath() : null;
+        if (distribution === 'portable' && (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath))) {
             return { status: 'error', message: 'The current portable executable could not be located.' };
         }
         try {
-            await runInstaller(manifest, targetPath);
+            await runInstaller(manifest, targetPath, distribution);
             // The installer waits for this process to exit before replacing the portable EXE.
             // Without an explicit quit the UI stays in the installing state forever.
             setTimeout(() => app.quit(), 250);
@@ -453,10 +512,11 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
             await clearPendingManifest(manifest);
             return false;
         }
-        const targetPath = getPortableExecutablePath();
-        if (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath)) return false;
+        const distribution = getDistribution();
+        const targetPath = distribution === 'portable' ? getPortableExecutablePath() : null;
+        if (distribution === 'portable' && (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath))) return false;
         try {
-            await runInstaller(manifest, targetPath);
+            await runInstaller(manifest, targetPath, distribution);
             return true;
         } catch {
             return false;

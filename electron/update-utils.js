@@ -1,5 +1,7 @@
 const SEMVER_PATTERN = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
-const ASSET_PATTERN = /^FastImage-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-Windows-Portable\.exe$/;
+const PORTABLE_ASSET_PATTERN = /^FastImage-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-Windows-Portable\.exe$/;
+const INSTALLER_ASSET_PATTERN = /^FastImage-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-Windows-Setup\.exe$/;
+const ASSET_PATTERN = PORTABLE_ASSET_PATTERN;
 
 function parseVersion(value) {
     if (typeof value !== 'string') return null;
@@ -62,31 +64,39 @@ function getPortableAssetName(version) {
     return normalized ? `FastImage-${normalized}-Windows-Portable.exe` : null;
 }
 
+function getInstallerAssetName(version) {
+    const normalized = normalizeVersion(version);
+    return normalized ? `FastImage-${normalized}-Windows-Setup.exe` : null;
+}
+
 function parseSha256Digest(value) {
     if (typeof value !== 'string') return null;
     const match = value.trim().match(/^(?:sha256:)?([a-f0-9]{64})$/i);
     return match ? match[1].toLowerCase() : null;
 }
 
-function selectReleaseAsset(release, version) {
+function selectReleaseAsset(release, version, distribution = 'portable') {
     if (!release || !Array.isArray(release.assets)) return null;
-    const expectedName = getPortableAssetName(version);
+    const expectedName = distribution === 'installer'
+        ? getInstallerAssetName(version)
+        : getPortableAssetName(version);
+    const assetPattern = distribution === 'installer' ? INSTALLER_ASSET_PATTERN : PORTABLE_ASSET_PATTERN;
     if (!expectedName) return null;
     return release.assets.find((asset) => (
         asset
         && asset.name === expectedName
-        && ASSET_PATTERN.test(asset.name)
+        && assetPattern.test(asset.name)
         && typeof asset.browser_download_url === 'string'
     )) ?? null;
 }
 
-function buildUpdateInfo(release, currentVersion) {
+function buildUpdateInfo(release, currentVersion, distribution = 'portable') {
     if (!release || typeof release !== 'object') return null;
     const version = normalizeVersion(release.tag_name);
     const comparison = compareVersions(version, currentVersion);
     if (!version || comparison === null || comparison <= 0) return null;
 
-    const asset = selectReleaseAsset(release, version);
+    const asset = selectReleaseAsset(release, version, distribution);
     if (!asset) return null;
 
     return {
@@ -105,8 +115,10 @@ function buildUpdateInfo(release, currentVersion) {
 
 module.exports = {
     ASSET_PATTERN,
+    INSTALLER_ASSET_PATTERN,
     buildUpdateInfo,
     compareVersions,
+    getInstallerAssetName,
     getPortableAssetName,
     normalizeVersion,
     parseSha256Digest,
