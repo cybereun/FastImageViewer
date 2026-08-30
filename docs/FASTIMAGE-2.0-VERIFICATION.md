@@ -22,7 +22,8 @@
 ## 배포 산출물
 
 - 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.5-Windows-Portable.exe`
-- 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
+- 크기: 75,649,812 bytes
+- SHA-256: `00EF9909B6A5B8DA6AC866173429A557E2BAAE9E94444F24A50C135B56EC63C6`
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -48,7 +49,8 @@
 - [ ] 뷰어 맞춤/1:1/커서 줌/팬/회전/슬라이드쇼/전체화면
 - [ ] 편집기 before/after, crop preset, adjustments, undo/redo, Save As
 - [ ] 동일 형식 원본 덮어쓰기 확인 대화상자 및 watcher 새로고침
-- [ ] 설정의 한국어/영어, 다크/라이트, 삭제 확인, 휠 동작, 기본 폴더
+- [ ] 설정의 한국어/영어, 다크/라이트, 삭제 확인, 휠 동작, 기본 폴더, 키보드 단축키 안내
+- [ ] 썸네일 창에 키보드 안내가 없고 폴더 이미지가 원본 중복 로딩 없이 빠르게 표시
 - [ ] About의 진단 정보 복사 동작(이미지 데이터 미포함)
 - [ ] 앱 전체 하단 통합 푸터의 항목 수·준비 상태·우측 버전 표시 및 버전 클릭
 - [ ] 새 GitHub Release가 있을 때 시작 후 업데이트 안내창 표시
