@@ -39,8 +39,9 @@ export function UpdateDialog({
   onClose,
 }: UpdateDialogProps) {
   const isBusy = action === 'downloading' || action === 'installing';
-  const progressPercent = progress && progress.totalBytes > 0
-    ? Math.min(100, Math.round((progress.receivedBytes / progress.totalBytes) * 100))
+  const progressTotalBytes = progress?.totalBytes || update.size || 0;
+  const progressPercent = progress && progressTotalBytes > 0
+    ? Math.min(100, Math.round((progress.receivedBytes / progressTotalBytes) * 100))
     : 0;
 
   return (
@@ -90,7 +91,7 @@ export function UpdateDialog({
           <div className="mt-4 rounded-lg border border-gray-700 bg-gray-900/60 p-3" aria-live="polite">
             <div className="flex items-center justify-between text-xs text-gray-300">
               <span>{t(language, 'downloadingUpdate')}</span>
-              <span>{progressPercent}%</span>
+              <span>{progress ? `${progressPercent}% · ${formatBytes(progress.receivedBytes)} / ${formatBytes(progressTotalBytes)}` : '0%'}</span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-700">
               <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${progressPercent}%` }} />
@@ -99,9 +100,15 @@ export function UpdateDialog({
         )}
 
         {action === 'installing' && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-200" aria-live="polite">
-            <CheckCircle2 size={16} />
-            <span>{t(language, 'installingUpdate')}</span>
+          <div className="mt-4 rounded-lg border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-200" aria-live="polite">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              <span>{t(language, 'installingUpdate')}</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-emerald-950">
+              <div className="h-full w-full animate-pulse rounded-full bg-emerald-400/70" />
+            </div>
+            <p className="mt-2 text-xs text-emerald-200/70">{t(language, 'updateRestartDetail')}</p>
           </div>
         )}
 

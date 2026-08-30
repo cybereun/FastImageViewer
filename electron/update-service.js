@@ -252,9 +252,10 @@ function getPortableExecutablePath() {
     return path.resolve(candidate);
 }
 
-function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress } = {}) {
+function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawnInstaller: spawnInstallerOverride } = {}) {
     let latestUpdate = null;
     let downloadInFlight = null;
+    const runInstaller = spawnInstallerOverride ?? spawnInstaller;
 
     const getCurrentVersion = () => String(app.getVersion());
     const isSupported = () => Boolean(app.isPackaged && process.platform === 'win32');
@@ -428,7 +429,10 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress } = {}
             return { status: 'error', message: 'The current portable executable could not be located.' };
         }
         try {
-            await spawnInstaller(manifest, targetPath);
+            await runInstaller(manifest, targetPath);
+            // The installer waits for this process to exit before replacing the portable EXE.
+            // Without an explicit quit the UI stays in the installing state forever.
+            setTimeout(() => app.quit(), 250);
             return { status: 'restarting', version: manifest.version };
         } catch (error) {
             return { status: 'error', message: toErrorMessage(error) };
@@ -452,7 +456,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress } = {}
         const targetPath = getPortableExecutablePath();
         if (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath)) return false;
         try {
-            await spawnInstaller(manifest, targetPath);
+            await runInstaller(manifest, targetPath);
             return true;
         } catch {
             return false;

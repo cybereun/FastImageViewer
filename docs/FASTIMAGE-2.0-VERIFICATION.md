@@ -1,4 +1,4 @@
-# FastImage 2.0/2.0.1/2.0.2/2.0.3 Verification Record
+# FastImage 2.0/2.0.1/2.0.2/2.0.3/2.0.4 Verification Record
 
 검증 기준일: 2026-08-30  
 작업 checkout: `L:\Codex-L\fast-image`
@@ -8,7 +8,7 @@
 | 명령 | 결과 |
 | --- | --- |
 | `npm ci --no-audit --no-fund` | exit 0 |
-| `npm test -- --run` | exit 0 — 3 files, 10 tests passed |
+| `npm test -- --run` | exit 0 — 4 files, 11 tests passed |
 | `npm run typecheck` | exit 0 |
 | `node --check electron/main.js` | exit 0 |
 | `node --check electron/preload.js` | exit 0 |
@@ -21,9 +21,9 @@
 
 ## 배포 산출물
 
-- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.3-Windows-Portable.exe`
-- 크기: 75,647,951 bytes
-- SHA-256: `6985E29CEF0810075532C50CD88E4AD93004A805876F95F4A4935FFF29B7D735`
+- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.4-Windows-Portable.exe`
+- 크기: (GitHub Actions 릴리스 완료 후 기록)
+- SHA-256: (GitHub Actions 릴리스 완료 후 기록)
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -68,3 +68,4 @@
 - `v2.0.1` 업데이트 자산은 GitHub API에서 `uploaded` 상태와 SHA-256 digest를 확인했고, Y: 실행파일 해시도 L:과 일치했습니다.
 - `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
 - `v2.0.3` CI 자산은 GitHub Release에서 내려받아 L:에 반영했고, Y: 실행파일도 동일 SHA-256으로 동기화했습니다.
+- `v2.0.4` 업데이트 설치 회귀 테스트는 설치 도우미 예약 후 앱 종료 호출을 확인했으며, CI 자산은 릴리스 완료 후 L:/Y:에 동기화합니다.
