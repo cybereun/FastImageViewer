@@ -22,9 +22,11 @@
 ## 배포 산출물
 
 - 포터블 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.6-Windows-Portable.exe`
-- 포터블 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
+- 포터블 크기: 100,610,360 bytes
+- 포터블 SHA-256: `667B98476BB1D924E35A08C77675642B9795B56AC89E8B5B7A2FDAB95A605210`
 - 설치파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.6-Windows-Setup.exe`
-- 설치파일 크기와 SHA-256: GitHub Actions 릴리스 자산 생성 후 기록
+- 설치파일 크기: 100,660,424 bytes
+- 설치파일 SHA-256: `E15350C6CD9439819068B4680C95DEF55A2100BCC05283777B86EC86E9CE62B4`
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
