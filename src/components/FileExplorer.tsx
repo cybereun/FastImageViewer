@@ -12,6 +12,8 @@ import {
 import type { FolderNode } from '../types';
 import { cn } from '../utils/cn';
 import { IMAGE_DRAG_MIME } from '../constants/drag';
+import type { Language } from '../i18n';
+import { t } from '../i18n';
 
 interface FileExplorerProps {
   folders: FolderNode[];
@@ -19,14 +21,16 @@ interface FileExplorerProps {
   onSelectFolder: (id: string | null) => void;
   onToggleFolder?: (node: FolderNode) => void;
   onImageDropToFolder?: (payload: {
-    imagePath: string;
+    imagePaths: string[];
     targetFolderPath: string;
     move: boolean;
   }) => Promise<void> | void;
   onOpenDirectory?: () => void;
+  onOpenFiles?: () => void;
   onLoadFiles: (files: FileList | File[]) => void;
   totalCount: number;
   loading: boolean;
+  language?: Language;
 }
 
 function FolderItem({
@@ -43,7 +47,7 @@ function FolderItem({
   onSelectFolder: (id: string) => void;
   onToggleFolder?: (node: FolderNode) => void;
   onImageDropToFolder?: (payload: {
-    imagePath: string;
+    imagePaths: string[];
     targetFolderPath: string;
     move: boolean;
   }) => Promise<void> | void;
@@ -82,11 +86,19 @@ function FolderItem({
     e.stopPropagation();
     setDropActive(false);
 
-    const imagePath = e.dataTransfer.getData(IMAGE_DRAG_MIME);
-    if (!imagePath || !onImageDropToFolder) return;
+    const rawPaths = e.dataTransfer.getData(IMAGE_DRAG_MIME);
+    if (!rawPaths || !onImageDropToFolder) return;
+    let imagePaths: string[];
+    try {
+      const parsed = JSON.parse(rawPaths);
+      imagePaths = Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [rawPaths];
+    } catch {
+      imagePaths = [rawPaths];
+    }
+    if (imagePaths.length === 0) return;
 
     await onImageDropToFolder({
-      imagePath,
+      imagePaths,
       targetFolderPath: node.path,
       move: !e.ctrlKey,
     });
@@ -166,9 +178,11 @@ export function FileExplorer({
   onToggleFolder,
   onImageDropToFolder,
   onOpenDirectory,
+  onOpenFiles,
   onLoadFiles,
   totalCount,
   loading,
+  language = 'en',
 }: FileExplorerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -212,7 +226,7 @@ export function FileExplorer({
       <div className="flex flex-col gap-2 border-b border-gray-800 p-3">
         <div className="flex items-center gap-2 text-gray-400">
           <Monitor size={16} />
-          <span className="text-xs font-semibold uppercase tracking-wider">Storage</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">{t(language, 'storage')}</span>
         </div>
 
         <div className="flex gap-2">
@@ -221,12 +235,12 @@ export function FileExplorer({
             className="flex flex-1 items-center justify-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
           >
             <FolderPlus size={14} />
-            Open Folder
+            {t(language, 'openFolder')}
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
             className="flex items-center justify-center gap-2 rounded bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-600"
-            title="Add image files"
+            onClick={onOpenFiles ?? (() => fileInputRef.current?.click())}
+            title={t(language, 'openFiles')}
           >
             <Upload size={14} />
           </button>
@@ -245,18 +259,18 @@ export function FileExplorer({
       />
 
       <div className="border-b border-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-        This PC
+        {t(language, 'thisPc')}
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-x-hidden overflow-y-auto py-2">
         {loading && totalCount === 0 && (
-          <div className="animate-pulse px-4 py-2 text-xs text-gray-500">Scanning...</div>
+          <div className="animate-pulse px-4 py-2 text-xs text-gray-500">{t(language, 'scanning')}</div>
         )}
 
         {folders.length === 0 && !loading ? (
           <div className="flex h-40 flex-col items-center justify-center gap-2 px-4 text-center text-gray-500">
             <HardDrive size={24} className="opacity-50" />
-            <p className="text-xs">No folders loaded.</p>
+            <p className="text-xs">{t(language, 'noFolders')}</p>
           </div>
         ) : (
           <div className="space-y-0.5 px-2">
@@ -276,8 +290,8 @@ export function FileExplorer({
       </div>
 
       <div className="flex justify-between border-t border-gray-800 bg-[#252526] p-2 text-xs text-gray-400">
-        <span>{totalCount} items</span>
-        <span>{loading ? 'Scanning...' : 'Ready'}</span>
+        <span>{totalCount} {t(language, 'items')}</span>
+        <span>{loading ? t(language, 'scanning') : t(language, 'ready')}</span>
       </div>
     </div>
   );

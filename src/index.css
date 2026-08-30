@@ -72,3 +72,35 @@ body {
   overflow: hidden;
   background: #030712;
 }
+
+.fast-image-app[data-theme="light"] {
+  color-scheme: light;
+}
+
+.fast-image-app[data-theme="light"] [class~="bg-gray-950"],
+.fast-image-app[data-theme="light"] [class~="bg-gray-900"],
+.fast-image-app[data-theme="light"] [class~="bg-gray-800"],
+.fast-image-app[data-theme="light"] [class~="bg-[#0d0d0d]"],
+.fast-image-app[data-theme="light"] [class~="bg-[#1e1e1e]"],
+.fast-image-app[data-theme="light"] [class~="bg-[#121212]"],
+.fast-image-app[data-theme="light"] [class~="bg-[#252526]"],
+.fast-image-app[data-theme="light"] [class~="bg-[#1a1a1a]"],
+.fast-image-app[data-theme="light"] [class~="bg-[#1f1f1f]"] {
+  background-color: #f8fafc;
+}
+
+.fast-image-app[data-theme="light"] [class~="text-white"],
+.fast-image-app[data-theme="light"] [class~="text-gray-200"],
+.fast-image-app[data-theme="light"] [class~="text-gray-300"] {
+  color: #1f2937;
+}
+
+.fast-image-app[data-theme="light"] [class~="text-gray-400"],
+.fast-image-app[data-theme="light"] [class~="text-gray-500"] {
+  color: #64748b;
+}
+
+.fast-image-app[data-theme="light"] [class~="border-gray-700"],
+.fast-image-app[data-theme="light"] [class~="border-gray-800"] {
+  border-color: #cbd5e1;
+}

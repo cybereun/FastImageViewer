@@ -1,13 +1,27 @@
 
+export type ImageSource = 'folder' | 'import';
+
+export interface ImageMetadata {
+  favorite: boolean;
+  rating: number;
+  colorLabel: string | null;
+  tags: string[];
+}
+
 export interface ImageFile {
   id: string;
   name: string;
-  file?: File; // Optional
-  url: string; // "local://path" for Electron
+  file?: File;
+  url: string;
   size: number;
   type: string;
   lastModified: number;
-  path: string; // Absolute FS path
+  path: string;
+  source: ImageSource;
+  metadata?: ImageMetadata;
+  thumbnailUrl?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface FolderNode {
@@ -17,6 +31,7 @@ export interface FolderNode {
   children: FolderNode[];
   isLoaded: boolean;
   isExpanded: boolean;
+  error?: string;
 }
 
 export interface EditState {
@@ -24,9 +39,55 @@ export interface EditState {
   flipH: boolean;
   flipV: boolean;
   quality: number;
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   format: 'image/png' | 'image/jpeg' | 'image/webp';
+  crop?: CropRect | null;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+}
+
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type ViewSize = 'small' | 'medium' | 'large';
+export type SortMode = 'name' | 'size' | 'date' | 'rating';
+export type SortDirection = 'asc' | 'desc';
+
+export interface Preferences {
+  language: 'ko' | 'en';
+  theme: 'dark' | 'light';
+  sidebarOpen: boolean;
+  viewSize: ViewSize;
+  sortMode: SortMode;
+  sortDirection: SortDirection;
+  wheelNavigation: boolean;
+  defaultFolder: string | null;
+  confirmDelete: boolean;
+  recentFolders: string[];
+  imageMetadata: Record<string, ImageMetadata>;
+}
+
+export interface BatchOperationItem {
+  sourcePath: string;
+  destinationPath?: string;
+  name?: string;
+  error?: string;
+}
+
+export interface BatchOperationResult {
+  succeeded: BatchOperationItem[];
+  failed: BatchOperationItem[];
+}
+
+export interface BatchRenameRequest {
+  sourcePath: string;
+  nextName: string;
 }
 
 declare global {
@@ -37,10 +98,26 @@ declare global {
       readDirectory: (path: string) => Promise<DirectoryContent>;
       getInitialRoots: () => Promise<Array<{ name: string; path: string }>>;
       toLocalUrl: (filePath: string) => string;
+      getThumbnailUrl: (filePath: string, size?: number) => Promise<string>;
       copyImageFile: (sourcePath: string, targetFolderPath: string) => Promise<{ path: string; name: string }>;
       moveImageFile: (sourcePath: string, targetFolderPath: string) => Promise<{ path: string; name: string }>;
       renameImageFile: (sourcePath: string, nextName: string) => Promise<{ path: string; name: string }>;
       deleteImageFile: (sourcePath: string) => Promise<{ ok: true }>;
+      overwriteImageFile: (sourcePath: string, bytes: ArrayBuffer) => Promise<{ path: string; name: string }>;
+      batchFileOperation: (
+        operation: 'copy' | 'move' | 'delete',
+        sourcePaths: string[],
+        targetFolderPath?: string
+      ) => Promise<BatchOperationResult>;
+      batchRenameImages: (renames: BatchRenameRequest[]) => Promise<BatchOperationResult>;
+      openImageFiles: () => Promise<DirectoryContent['files']>;
+      startWatchingDirectory: (dirPath: string) => Promise<string>;
+      stopWatchingDirectory: (watchId: string) => Promise<void>;
+      onDirectoryChanged: (callback: (dirPath: string) => void) => () => void;
+      onOpenFilesFromArgs: (callback: (files: DirectoryContent['files']) => void) => () => void;
+      onOpenFolderFromArgs: (callback: (folder: { path: string; name: string; content: DirectoryContent }) => void) => () => void;
+      loadPreferences: () => Promise<Preferences>;
+      savePreferences: (preferences: Preferences) => Promise<void>;
       minimizeWindow: () => void;
       toggleMaximizeWindow: () => void;
       closeWindow: () => void;
@@ -62,4 +139,5 @@ export interface DirectoryContent {
     name: string;
     path: string;
   }>;
+  error?: string;
 }

@@ -11,10 +11,15 @@ import {
   RotateCw,
   Pencil,
   Download,
+  FileDown,
   Maximize2,
   Info,
+  Star,
+  Play,
+  Pause,
+  Expand,
 } from 'lucide-react';
-import type { ImageFile } from '../types';
+import type { ImageFile, ImageMetadata } from '../types';
 import { ImageEditor } from './ImageEditor';
 import { cn } from '../utils/cn';
 
@@ -23,6 +28,8 @@ interface ImageViewerProps {
   currentIndex: number;
   onClose: () => void;
   onIndexChange: (index: number) => void;
+  wheelNavigation?: boolean;
+  onUpdateImageMetadata?: (imageId: string, patch: Partial<ImageMetadata>) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -36,8 +43,11 @@ export function ImageViewer({
   currentIndex,
   onClose,
   onIndexChange,
+  wheelNavigation = true,
+  onUpdateImageMetadata,
 }: ImageViewerProps) {
   const [zoom, setZoom] = useState(1);
+  const [zoomMode, setZoomMode] = useState<'fit' | 'actual' | 'custom'>('fit');
   const [rotation, setRotation] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -46,9 +56,17 @@ export function ImageViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [slideshow, setSlideshow] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const imageStageRef = useRef<HTMLDivElement | null>(null);
 
   const currentImage = images[currentIndex];
+
+  const isEditableElement = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return target.isContentEditable || ['input', 'textarea', 'select'].includes(target.tagName.toLowerCase());
+  };
 
   const clearControlsTimer = useCallback(() => {
     if (controlsTimer.current) {
@@ -73,9 +91,39 @@ export function ImageViewer({
 
   const resetView = useCallback(() => {
     setZoom(1);
+    setZoomMode('fit');
     setRotation(0);
     setPosition({ x: 0, y: 0 });
   }, []);
+
+  const clampPosition = useCallback((next: { x: number; y: number }, targetZoom = zoom) => {
+    const stage = imageStageRef.current;
+    const image = imageRef.current;
+    if (!stage || !image || targetZoom <= 1) return { x: 0, y: 0 };
+    const maxX = Math.max(0, (image.offsetWidth * targetZoom - stage.clientWidth) / 2);
+    const maxY = Math.max(0, (image.offsetHeight * targetZoom - stage.clientHeight) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, next.x)),
+      y: Math.max(-maxY, Math.min(maxY, next.y)),
+    };
+  }, [zoom]);
+
+  const changeZoom = useCallback((nextZoom: number, cursor?: { x: number; y: number }) => {
+    const boundedZoom = Math.min(Math.max(nextZoom, 0.1), 10);
+    setZoomMode('custom');
+    setZoom((previousZoom) => {
+      if (!cursor || previousZoom <= 0) {
+        setPosition((previous) => clampPosition(previous, boundedZoom));
+        return boundedZoom;
+      }
+      const ratio = boundedZoom / previousZoom;
+      setPosition((previous) => clampPosition({
+        x: cursor.x - (cursor.x - previous.x) * ratio,
+        y: cursor.y - (cursor.y - previous.y) * ratio,
+      }, boundedZoom));
+      return boundedZoom;
+    });
+  }, [clampPosition]);
 
   const navigate = useCallback(
     (direction: number) => {
@@ -89,6 +137,7 @@ export function ImageViewer({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableElement(e.target)) return;
       switch (e.key) {
         case 'ArrowLeft':
           navigate(-1);
@@ -105,16 +154,25 @@ export function ImageViewer({
           break;
         case '+':
         case '=':
-          setZoom((value) => Math.min(value * 1.2, 10));
+          changeZoom(zoom * 1.2);
           break;
         case '-':
-          setZoom((value) => Math.max(value / 1.2, 0.1));
+          changeZoom(zoom / 1.2);
           break;
         case '0':
           resetView();
           break;
         case 'r':
           setRotation((value) => (value + 90) % 360);
+          break;
+        case 'f':
+          if (onUpdateImageMetadata && currentImage) {
+            onUpdateImageMetadata(currentImage.id, { favorite: !currentImage.metadata?.favorite });
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          setSlideshow((value) => !value);
           break;
         default:
           break;
@@ -123,7 +181,13 @@ export function ImageViewer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, onClose, resetView, showEditor]);
+  }, [changeZoom, currentImage, navigate, onClose, onUpdateImageMetadata, resetView, showEditor, zoom]);
+
+  useEffect(() => {
+    if (!slideshow || images.length < 2) return;
+    const timer = window.setInterval(() => navigate(1), 3000);
+    return () => window.clearInterval(timer);
+  }, [images.length, navigate, slideshow]);
 
   useEffect(() => {
     scheduleControlsHide();
@@ -167,16 +231,26 @@ export function ImageViewer({
       keepControlsVisible();
       if (e.ctrlKey || e.metaKey) {
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        setZoom((value) => Math.min(Math.max(value * delta, 0.1), 10));
+        const stage = imageStageRef.current;
+        if (stage) {
+          const rect = stage.getBoundingClientRect();
+          changeZoom(zoom * delta, {
+            x: e.clientX - (rect.left + rect.width / 2),
+            y: e.clientY - (rect.top + rect.height / 2),
+          });
+        } else {
+          changeZoom(zoom * delta);
+        }
         return;
       }
+      if (!wheelNavigation) return;
       if (e.deltaY > 0) {
         navigate(1);
       } else {
         navigate(-1);
       }
     },
-    [keepControlsVisible, navigate]
+    [changeZoom, keepControlsVisible, navigate, wheelNavigation, zoom]
   );
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -188,10 +262,10 @@ export function ImageViewer({
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging) {
-      setPosition({
+      setPosition(clampPosition({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y,
-      });
+      }));
     }
     keepControlsVisible();
   };
@@ -204,9 +278,46 @@ export function ImageViewer({
     if (zoom > 1) {
       resetView();
     } else {
-      setZoom(2.5);
+      changeZoom(2.5);
     }
   };
+
+  const downloadCurrentImage = useCallback(() => {
+    const source = new Image();
+    source.onload = () => {
+      const quarterTurn = rotation % 180 !== 0;
+      const canvas = document.createElement('canvas');
+      canvas.width = quarterTurn ? source.naturalHeight : source.naturalWidth;
+      canvas.height = quarterTurn ? source.naturalWidth : source.naturalHeight;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.translate(canvas.width / 2, canvas.height / 2);
+      context.rotate((rotation * Math.PI) / 180);
+      context.drawImage(source, -source.naturalWidth / 2, -source.naturalHeight / 2);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = currentImage.name.replace(/(\.[^.]+)?$/, '_view$1');
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      }, ['image/png', 'image/jpeg', 'image/webp'].includes(currentImage.type) ? currentImage.type : 'image/png');
+    };
+    source.onerror = () => undefined;
+    source.src = currentImage.url;
+  }, [currentImage, rotation]);
+
+  const downloadOriginalImage = useCallback(() => {
+    const anchor = document.createElement('a');
+    anchor.href = currentImage.url;
+    anchor.download = currentImage.name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }, [currentImage]);
 
   if (!currentImage) return null;
 
@@ -267,6 +378,48 @@ export function ImageViewer({
             </button>
             <button
               onClick={() => {
+                if (onUpdateImageMetadata) {
+                  onUpdateImageMetadata(currentImage.id, { favorite: !currentImage.metadata?.favorite });
+                }
+                keepControlsVisible();
+              }}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+                currentImage.metadata?.favorite ? 'text-yellow-300' : 'text-gray-300 hover:bg-white/10 hover:text-white'
+              )}
+              title="Favorite (F)"
+              aria-label="Toggle favorite"
+            >
+              <Star size={18} fill={currentImage.metadata?.favorite ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              onClick={() => {
+                setSlideshow((value) => !value);
+                keepControlsVisible();
+              }}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+                slideshow ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10 hover:text-white'
+              )}
+              title="Slideshow (Space)"
+              aria-label={slideshow ? 'Stop slideshow' : 'Start slideshow'}
+            >
+              {slideshow ? <Pause size={18} /> : <Play size={18} />}
+            </button>
+            <button
+              onClick={() => {
+                if (document.fullscreenElement) void document.exitFullscreen();
+                else void document.documentElement.requestFullscreen();
+                keepControlsVisible();
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+              title="Fullscreen"
+              aria-label="Toggle fullscreen"
+            >
+              <Expand size={18} />
+            </button>
+            <button
+              onClick={() => {
                 window.electron.minimizeWindow();
                 keepControlsVisible();
               }}
@@ -296,15 +449,21 @@ export function ImageViewer({
         </div>
 
         <div
+          ref={imageStageRef}
           className="flex flex-1 items-center justify-center overflow-hidden"
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
           style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
         >
           <img
+            ref={imageRef}
             src={currentImage.url}
             alt={currentImage.name}
-            className="max-h-full max-w-full select-none transition-transform duration-150"
+            className={cn(
+              'select-none transition-transform duration-150',
+              zoomMode === 'fit' && 'max-h-full max-w-full',
+              zoomMode !== 'fit' && 'shrink-0'
+            )}
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom}) rotate(${rotation}deg)`,
               transformOrigin: 'center center',
@@ -339,20 +498,25 @@ export function ImageViewer({
           )}
         >
           <button
-            onClick={() => setZoom((value) => Math.max(value / 1.3, 0.1))}
+            onClick={() => changeZoom(zoom / 1.3)}
             className="rounded-lg p-2 text-gray-300 hover:bg-white/10 hover:text-white"
             title="Zoom out"
           >
             <ZoomOut size={18} />
           </button>
           <button
-            onClick={resetView}
+            onClick={() => {
+              setZoomMode('actual');
+              setZoom(1);
+              setPosition({ x: 0, y: 0 });
+            }}
             className="min-w-[60px] rounded-lg px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10 hover:text-white"
+            title="Actual pixels"
           >
-            {Math.round(zoom * 100)}%
+            {zoomMode === 'actual' ? '1:1' : `${Math.round(zoom * 100)}%`}
           </button>
           <button
-            onClick={() => setZoom((value) => Math.min(value * 1.3, 10))}
+            onClick={() => changeZoom(zoom * 1.3)}
             className="rounded-lg p-2 text-gray-300 hover:bg-white/10 hover:text-white"
             title="Zoom in"
           >
@@ -367,30 +531,19 @@ export function ImageViewer({
             <RotateCw size={18} />
           </button>
           <button
-            onClick={() => {
-              const canvas = document.createElement('canvas');
-              const img = new Image();
-              img.onload = () => {
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0);
-                canvas.toBlob((blob) => {
-                  if (!blob) return;
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = currentImage.name;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                });
-              };
-              img.src = currentImage.url;
-            }}
+            onClick={downloadCurrentImage}
             className="rounded-lg p-2 text-gray-300 hover:bg-white/10 hover:text-white"
             title="Download"
           >
             <Download size={18} />
+          </button>
+          <button
+            onClick={downloadOriginalImage}
+            className="rounded-lg p-2 text-gray-300 hover:bg-white/10 hover:text-white"
+            title="Download original"
+            aria-label="Download original"
+          >
+            <FileDown size={18} />
           </button>
           <button
             onClick={resetView}
@@ -427,6 +580,16 @@ export function ImageViewer({
                 <span className="text-gray-400">Path</span>
                 <span className="max-w-[150px] truncate text-right text-gray-200">{currentImage.path}</span>
               </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-400">Rating</span>
+                <span className="text-yellow-300">{'★'.repeat(currentImage.metadata?.rating ?? 0)}{'☆'.repeat(5 - (currentImage.metadata?.rating ?? 0))}</span>
+              </div>
+              {currentImage.metadata?.tags && currentImage.metadata.tags.length > 0 && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-400">Tags</span>
+                  <span className="max-w-[150px] truncate text-right text-gray-200">{currentImage.metadata.tags.join(', ')}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -462,7 +625,7 @@ export function ImageViewer({
         </div>
       </div>
 
-      {showEditor && <ImageEditor image={currentImage} onClose={() => setShowEditor(false)} />}
+      {showEditor && <ImageEditor key={currentImage.id} image={currentImage} onClose={() => setShowEditor(false)} />}
     </>
   );
 }

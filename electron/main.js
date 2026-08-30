@@ -1,9 +1,55 @@
-
-const { app, BrowserWindow, ipcMain, dialog, protocol, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const {
+    isSupportedImagePath,
+    readDirectory,
+    readImageFiles,
+    getDisplayName,
+    copyImageFile,
+    moveImageFile,
+    renameImageFile,
+    deleteImageFile,
+    overwriteImageFile,
+    batchFileOperation,
+    batchRenameImageFiles,
+    getThumbnailDataUrl,
+} = require('./file-system');
+const { loadPreferences, savePreferences } = require('./preferences');
 
 const isDev = !app.isPackaged;
+const directoryWatchers = new Map();
+let mainWindow = null;
+const singleInstanceLock = app.requestSingleInstanceLock();
+
+async function sendLaunchFiles(win, commandLine) {
+    const folderCandidate = commandLine
+        .filter((value) => typeof value === 'string' && !value.startsWith('-'))
+        .map((value) => path.resolve(value))
+        .find((value) => {
+            try {
+                return fs.statSync(value).isDirectory();
+            } catch {
+                return false;
+            }
+        });
+    if (folderCandidate) {
+        const content = await readDirectory(folderCandidate);
+        if (!win.isDestroyed()) {
+            win.webContents.send('app:open-folder', {
+                path: folderCandidate,
+                name: getDisplayName(folderCandidate),
+                content,
+            });
+        }
+        return;
+    }
+    const candidates = commandLine.filter((value) => isSupportedImagePath(value));
+    if (candidates.length === 0 || win.isDestroyed()) return;
+    const files = await readImageFiles(candidates);
+    if (files.length > 0 && !win.isDestroyed()) win.webContents.send('app:open-files', files);
+}
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -19,8 +65,9 @@ function createWindow() {
         },
         frame: false,
         backgroundColor: '#1e1e1e',
-        show: false
+        show: false,
     });
+    mainWindow = win;
 
     Menu.setApplicationMenu(null);
 
@@ -33,85 +80,108 @@ function createWindow() {
     win.once('ready-to-show', () => {
         win.show();
         win.webContents.send('window:maximized-changed', win.isMaximized());
+        void sendLaunchFiles(win, process.argv.slice(1));
     });
 
-    win.on('maximize', () => {
-        win.webContents.send('window:maximized-changed', true);
-    });
-
-    win.on('unmaximize', () => {
-        win.webContents.send('window:maximized-changed', false);
+    win.on('maximize', () => win.webContents.send('window:maximized-changed', true));
+    win.on('unmaximize', () => win.webContents.send('window:maximized-changed', false));
+    win.on('closed', () => {
+        if (mainWindow === win) mainWindow = null;
     });
 }
 
-app.whenReady().then(() => {
+if (!singleInstanceLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (_event, commandLine) => {
+        if (!mainWindow) return;
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        void sendLaunchFiles(mainWindow, commandLine.slice(1));
+    });
+
+    app.whenReady().then(() => {
     protocol.registerFileProtocol('local', (request, callback) => {
         try {
             const parsed = new URL(request.url);
-            // Expected format: local:///{encodeURIComponent(absolutePath)}
             let encodedPath = parsed.pathname;
-            if (encodedPath.startsWith('/')) {
-                encodedPath = encodedPath.slice(1);
+            if (encodedPath.startsWith('/')) encodedPath = encodedPath.slice(1);
+            const decodedPath = path.normalize(decodeURIComponent(encodedPath));
+            if (!isSupportedImagePath(decodedPath)) {
+                callback({ error: -6 });
+                return;
             }
-            const decodedPath = decodeURIComponent(encodedPath);
-            callback({ path: path.normalize(decodedPath) });
+            const stats = fs.statSync(decodedPath);
+            if (!stats.isFile()) {
+                callback({ error: -6 });
+                return;
+            }
+            callback({ path: decodedPath });
         } catch (error) {
-            console.error('Protocol error:', error);
-            callback({ error: -2 });
+            console.warn('Local image protocol error:', error.message);
+            callback({ error: -6 });
         }
     });
 
-    createWindow();
+        createWindow();
 
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
+        app.on('activate', () => {
+            if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        });
     });
+}
+
+app.on('before-quit', () => {
+    for (const entry of directoryWatchers.values()) entry.watcher.close();
+    directoryWatchers.clear();
 });
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC Handlers
 ipcMain.handle('dialog:openDirectory', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-        properties: ['openDirectory'],
-    });
-    if (canceled) {
-        return null;
-    } else {
-        const rootPath = filePaths[0];
-        const content = await readDirectory(rootPath);
-        return { path: rootPath, name: getDisplayName(rootPath), content };
-    }
+    const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (canceled || !filePaths[0]) return null;
+    const rootPath = path.resolve(filePaths[0]);
+    const content = await readDirectory(rootPath);
+    return { path: rootPath, name: getDisplayName(rootPath), content };
 });
 
 ipcMain.handle('dialog:chooseDirectory', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-        properties: ['openDirectory'],
-    });
-    if (canceled) {
-        return null;
-    }
-
-    const dirPath = filePaths[0];
+    const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (canceled || !filePaths[0]) return null;
+    const dirPath = path.resolve(filePaths[0]);
     return { path: dirPath, name: getDisplayName(dirPath) };
 });
 
-ipcMain.handle('fs:readDirectory', async (event, dirPath) => {
-    return await readDirectory(dirPath);
+ipcMain.handle('dialog:openImageFiles', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openFile', 'multiSelections'],
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tif', 'tiff', 'avif'] }],
+    });
+    if (canceled) return [];
+    return readImageFiles(filePaths);
 });
+
+ipcMain.handle('fs:readDirectory', async (_event, dirPath) => readDirectory(dirPath));
+ipcMain.handle('fs:getThumbnail', async (_event, filePath, size) => getThumbnailDataUrl(filePath, size));
+ipcMain.handle('fs:copyImageFile', async (_event, sourcePath, targetFolderPath) => copyImageFile(sourcePath, targetFolderPath));
+ipcMain.handle('fs:moveImageFile', async (_event, sourcePath, targetFolderPath) => moveImageFile(sourcePath, targetFolderPath));
+ipcMain.handle('fs:renameImageFile', async (_event, sourcePath, nextName) => renameImageFile(sourcePath, nextName));
+ipcMain.handle('fs:deleteImageFile', async (_event, sourcePath) => deleteImageFile(sourcePath));
+ipcMain.handle('fs:overwriteImageFile', async (_event, sourcePath, bytes) => overwriteImageFile(sourcePath, bytes));
+ipcMain.handle('fs:batchFileOperation', async (_event, operation, sourcePaths, targetFolderPath) => (
+    batchFileOperation(operation, sourcePaths, targetFolderPath)
+));
+ipcMain.handle('fs:batchRenameImages', async (_event, renames) => batchRenameImageFiles(renames));
 
 ipcMain.handle('fs:getInitialRoots', async () => {
     const roots = [];
     const pushUnique = (name, rootPath) => {
         const normalized = path.resolve(rootPath);
         if (!fs.existsSync(normalized)) return;
-        if (roots.some((r) => r.path.toLowerCase() === normalized.toLowerCase())) return;
+        if (roots.some((root) => root.path.toLowerCase() === normalized.toLowerCase())) return;
         roots.push({ name, path: normalized });
     };
 
@@ -123,95 +193,52 @@ ipcMain.handle('fs:getInitialRoots', async () => {
         { name: 'Music', path: app.getPath('music') },
         { name: 'Videos', path: app.getPath('videos') },
     ];
-
-    for (const folder of knownFolders) {
-        pushUnique(folder.name, folder.path);
-    }
+    knownFolders.forEach((folder) => pushUnique(folder.name, folder.path));
 
     if (process.platform === 'win32') {
-        for (let i = 65; i <= 90; i += 1) {
-            const letter = String.fromCharCode(i);
+        for (let code = 65; code <= 90; code += 1) {
+            const letter = String.fromCharCode(code);
             const drivePath = `${letter}:\\`;
-            if (fs.existsSync(drivePath)) {
-                pushUnique(`${letter}:`, drivePath);
-            }
+            if (fs.existsSync(drivePath)) pushUnique(`${letter}:`, drivePath);
         }
     }
-
     return roots;
 });
 
-ipcMain.handle('fs:copyImageFile', async (_event, sourcePath, targetFolderPath) => {
-    const source = path.resolve(sourcePath);
-    const targetFolder = path.resolve(targetFolderPath);
-    await ensurePathExists(source);
-    await ensureDirectoryExists(targetFolder);
+ipcMain.handle('fs:startWatchingDirectory', async (event, dirPath) => {
+    const resolved = path.resolve(dirPath);
+    const stats = await fs.promises.stat(resolved);
+    if (!stats.isDirectory()) throw new Error('Watch target is not a directory.');
 
-    const destination = getAvailablePath(targetFolder, path.basename(source));
-    await fs.promises.copyFile(source, destination);
-    return { path: destination, name: path.basename(destination) };
-});
-
-ipcMain.handle('fs:moveImageFile', async (_event, sourcePath, targetFolderPath) => {
-    const source = path.resolve(sourcePath);
-    const targetFolder = path.resolve(targetFolderPath);
-    await ensurePathExists(source);
-    await ensureDirectoryExists(targetFolder);
-
-    if (isSamePath(path.dirname(source), targetFolder)) {
-        return { path: source, name: path.basename(source) };
-    }
-
-    const destination = getAvailablePath(targetFolder, path.basename(source));
-    if (isSamePath(source, destination)) {
-        return { path: destination, name: path.basename(destination) };
-    }
-
-    try {
-        await fs.promises.rename(source, destination);
-    } catch (error) {
-        // Cross-device moves can fail with EXDEV, so fallback to copy+delete.
-        if (error && error.code === 'EXDEV') {
-            await fs.promises.copyFile(source, destination);
-            await fs.promises.unlink(source);
-        } else {
-            throw error;
+    const watchId = crypto.randomUUID();
+    const watcher = fs.watch(resolved, { persistent: false }, () => {
+        if (!event.sender.isDestroyed()) event.sender.send('fs:directory-changed', resolved);
+    });
+    watcher.on('error', (error) => {
+        if (!event.sender.isDestroyed()) {
+            event.sender.send('fs:directory-watch-error', { dirPath: resolved, error: error.message });
         }
-    }
-
-    return { path: destination, name: path.basename(destination) };
+    });
+    directoryWatchers.set(watchId, { watcher, webContents: event.sender, dirPath: resolved });
+    event.sender.once('destroyed', () => {
+        const entry = directoryWatchers.get(watchId);
+        if (entry) {
+            entry.watcher.close();
+            directoryWatchers.delete(watchId);
+        }
+    });
+    return watchId;
 });
 
-ipcMain.handle('fs:renameImageFile', async (_event, sourcePath, nextName) => {
-    const source = path.resolve(sourcePath);
-    await ensurePathExists(source);
-
-    const sanitized = sanitizeFileName(nextName);
-    if (!sanitized) {
-        throw new Error('File name cannot be empty.');
-    }
-
-    const parsed = path.parse(source);
-    const extension = path.extname(sanitized) ? '' : parsed.ext;
-    const destination = path.join(parsed.dir, `${sanitized}${extension}`);
-
-    if (isSamePath(source, destination)) {
-        return { path: source, name: path.basename(source) };
-    }
-    if (fs.existsSync(destination)) {
-        throw new Error('A file with the same name already exists.');
-    }
-
-    await fs.promises.rename(source, destination);
-    return { path: destination, name: path.basename(destination) };
+ipcMain.handle('fs:stopWatchingDirectory', async (event, watchId) => {
+    const entry = directoryWatchers.get(watchId);
+    if (!entry || entry.webContents !== event.sender) return;
+    entry.watcher.close();
+    directoryWatchers.delete(watchId);
 });
 
-ipcMain.handle('fs:deleteImageFile', async (_event, sourcePath) => {
-    const source = path.resolve(sourcePath);
-    await ensurePathExists(source);
-    await shell.trashItem(source);
-    return { ok: true };
-});
+ipcMain.handle('preferences:load', async () => loadPreferences(app.getPath('userData')));
+ipcMain.handle('preferences:save', async (_event, preferences) => savePreferences(app.getPath('userData'), preferences));
 
 ipcMain.on('window:minimize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -221,11 +248,8 @@ ipcMain.on('window:minimize', (event) => {
 ipcMain.on('window:toggleMaximize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
-    if (win.isMaximized()) {
-        win.unmaximize();
-    } else {
-        win.maximize();
-    }
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
 });
 
 ipcMain.on('window:close', (event) => {
@@ -237,83 +261,3 @@ ipcMain.handle('window:isMaximized', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win ? win.isMaximized() : false;
 });
-
-async function readDirectory(dirPath) {
-    try {
-        const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
-        const files = [];
-        const folders = [];
-
-        const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|tif|avif)$/i;
-
-        for (const dirent of dirents) {
-            if (dirent.isDirectory()) {
-                folders.push({
-                    name: dirent.name,
-                    path: path.join(dirPath, dirent.name)
-                });
-            } else if (dirent.isFile()) {
-                if (imageExtensions.test(dirent.name)) {
-                    const stats = await fs.promises.stat(path.join(dirPath, dirent.name));
-                    files.push({
-                        name: dirent.name,
-                        path: path.join(dirPath, dirent.name),
-                        size: stats.size,
-                        lastModified: stats.mtimeMs,
-                        type: 'image/' + path.extname(dirent.name).slice(1)
-                    });
-                }
-            }
-        }
-
-        return { files, folders };
-    } catch (err) {
-        console.error('Failed to read directory:', err);
-        return { files: [], folders: [] };
-    }
-}
-
-function getDisplayName(dirPath) {
-    const resolved = path.resolve(dirPath);
-    const driveMatch = resolved.match(/^([A-Za-z]:)\\?$/);
-    if (driveMatch) return driveMatch[1];
-    const base = path.basename(resolved);
-    return base || resolved;
-}
-
-function isSamePath(left, right) {
-    return path.resolve(left).toLowerCase() === path.resolve(right).toLowerCase();
-}
-
-async function ensurePathExists(targetPath) {
-    await fs.promises.access(path.resolve(targetPath), fs.constants.F_OK);
-}
-
-async function ensureDirectoryExists(dirPath) {
-    const stats = await fs.promises.stat(path.resolve(dirPath));
-    if (!stats.isDirectory()) {
-        throw new Error('Target path is not a directory.');
-    }
-}
-
-function sanitizeFileName(name) {
-    if (typeof name !== 'string') return '';
-    const trimmed = name.trim();
-    if (!trimmed) return '';
-    if (trimmed.includes('/') || trimmed.includes('\\')) return '';
-    return trimmed.replace(/[<>:"|?*]/g, '').trim();
-}
-
-function getAvailablePath(targetDir, fileName) {
-    const parsed = path.parse(fileName);
-    const baseName = parsed.name || 'file';
-    const extension = parsed.ext || '';
-
-    let candidate = path.join(targetDir, `${baseName}${extension}`);
-    let index = 1;
-    while (fs.existsSync(candidate)) {
-        candidate = path.join(targetDir, `${baseName} (${index})${extension}`);
-        index += 1;
-    }
-    return candidate;
-}

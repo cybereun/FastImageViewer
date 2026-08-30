@@ -1,12 +1,15 @@
 {
   "name": "fast-image-viewer",
   "private": true,
-  "version": "1.0.0",
-  "description": "Fast Desktop Image Viewer",
+  "version": "2.0.0",
+  "description": "Fast local-first desktop image browser and organizer",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && electron-builder"
@@ -36,11 +39,12 @@
     "typescript": "5.9.3",
     "vite": "7.2.4",
     "vite-plugin-singlefile": "2.3.0",
+    "vitest": "^3.2.4",
     "wait-on": "^8.0.0"
   },
   "build": {
     "appId": "com.antigravity.fastimage",
-    "productName": "FastImageViewer",
+    "productName": "FastImage",
     "copyright": "Copyright © 2026 은준욱",
     "directories": {
       "output": "dist-electron"
@@ -51,7 +55,15 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "target": "portable"
-    }
+      "target": "portable",
+      "artifactName": "FastImage-${version}-Windows-Portable.${ext}"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "tif", "tiff", "avif"],
+        "name": "FastImage Image",
+        "role": "Editor"
+      }
+    ]
   }
 }

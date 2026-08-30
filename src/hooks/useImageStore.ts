@@ -1,15 +1,31 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { DirectoryContent, ImageFile, FolderNode } from '../types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  BatchOperationResult,
+  BatchRenameRequest,
+  DirectoryContent,
+  FolderNode,
+  ImageFile,
+  ImageMetadata,
+  Preferences,
+} from '../types';
+import {
+  DEFAULT_PREFERENCES,
+  mapFolders,
+  mapImages,
+  mapImportedFiles,
+  getMetadataForImage,
+  mergeImageMetadata,
+} from '../application/imageLibrary';
+import { isSupportedImageName } from '../domain/image';
 
 function updateNodeTree(
   nodes: FolderNode[],
   targetId: string,
   updater: (node: FolderNode) => FolderNode
 ): FolderNode[] {
+  const normalizedTarget = targetId.toLowerCase();
   return nodes.map((node) => {
-    if (node.id === targetId) {
-      return updater(node);
-    }
+    if (node.id.toLowerCase() === normalizedTarget) return updater(node);
     if (node.children.length > 0) {
       return { ...node, children: updateNodeTree(node.children, targetId, updater) };
     }
@@ -18,95 +34,163 @@ function updateNodeTree(
 }
 
 function findNodeById(nodes: FolderNode[], targetId: string): FolderNode | null {
+  const normalizedTarget = targetId.toLowerCase();
   for (const node of nodes) {
-    if (node.id === targetId) return node;
+    if (node.id.toLowerCase() === normalizedTarget) return node;
     const nested = findNodeById(node.children, targetId);
     if (nested) return nested;
   }
   return null;
 }
 
+function samePath(left: string | null, right: string | null): boolean {
+  return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
+}
+
 export function useImageStore() {
   const [rootFolders, setRootFolders] = useState<FolderNode[]>([]);
   const [currentImages, setCurrentImages] = useState<ImageFile[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderLabel, setSelectedFolderLabel] = useState('Home');
+  const [collectionKind, setCollectionKind] = useState<'folder' | 'files' | 'imported'>('folder');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
 
-  const mapFolders = useCallback((content: DirectoryContent): FolderNode[] => {
-    return content.folders
-      .map((folder) => ({
-        id: folder.path,
-        name: folder.name,
-        path: folder.path,
-        children: [],
-        isLoaded: false,
-        isExpanded: false,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const rootFoldersRef = useRef(rootFolders);
+  const selectedFolderRef = useRef<string | null>(null);
+  const preferencesRef = useRef(preferences);
+  const requestIdRef = useRef(0);
+  const watchIdRef = useRef<string | null>(null);
+  const importedUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    rootFoldersRef.current = rootFolders;
+  }, [rootFolders]);
+
+  useEffect(() => {
+    selectedFolderRef.current = selectedFolderId;
+  }, [selectedFolderId]);
+
+  useEffect(() => {
+    preferencesRef.current = preferences;
+  }, [preferences]);
+
+  const releaseImportedUrls = useCallback(() => {
+    importedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    importedUrlsRef.current.clear();
   }, []);
 
-  const mapImages = useCallback((content: DirectoryContent): ImageFile[] => {
-    return content.files
-      .map((file) => ({
-        id: file.path,
-        name: file.name,
-        path: file.path,
-        // Encode absolute Windows paths so spaces/#/Korean names do not break image URLs.
-        url: window.electron.toLocalUrl(file.path),
-        size: file.size,
-        lastModified: file.lastModified,
-        type: file.type || 'image/unknown',
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  useEffect(() => () => {
+    releaseImportedUrls();
+    if (watchIdRef.current) void window.electron.stopWatchingDirectory(watchIdRef.current);
+  }, [releaseImportedUrls]);
+
+  const persistPreferences = useCallback((next: Preferences) => {
+    preferencesRef.current = next;
+    void window.electron.savePreferences(next).catch((saveError) => {
+      console.warn('Failed to save preferences:', saveError);
+    });
   }, []);
 
-  const refreshFolderContent = useCallback(
+  const updatePreferences = useCallback(
+    (patch: Partial<Preferences>) => {
+      setPreferences((previous) => {
+        const next = { ...previous, ...patch };
+        persistPreferences(next);
+        return next;
+      });
+    },
+    [persistPreferences]
+  );
+
+  const rememberFolder = useCallback(
+    (folderPath: string) => {
+      setPreferences((previous) => {
+        const recentFolders = [
+          folderPath,
+          ...previous.recentFolders.filter((item) => !samePath(item, folderPath)),
+        ].slice(0, 12);
+        const next = { ...previous, defaultFolder: folderPath, recentFolders };
+        persistPreferences(next);
+        return next;
+      });
+    },
+    [persistPreferences]
+  );
+
+  const stopCurrentWatcher = useCallback(async () => {
+    if (!watchIdRef.current) return;
+    const watchId = watchIdRef.current;
+    watchIdRef.current = null;
+    await window.electron.stopWatchingDirectory(watchId).catch(() => undefined);
+  }, []);
+
+  const watchFolder = useCallback(
     async (folderPath: string) => {
-      const content = await window.electron.readDirectory(folderPath);
-      const children = mapFolders(content);
-      const images = mapImages(content);
-
-      setRootFolders((prev) =>
-        updateNodeTree(prev, folderPath, (node) => ({
-          ...node,
-          children,
-          isLoaded: true,
-        }))
-      );
-
-      if (selectedFolderId && selectedFolderId.toLowerCase() === folderPath.toLowerCase()) {
-        setCurrentImages(images);
-      }
-
-      return images;
-    },
-    [mapFolders, mapImages, selectedFolderId]
-  );
-
-  const loadFolderContent = useCallback(
-    async (node: FolderNode) => {
-      setLoading(true);
+      await stopCurrentWatcher();
       try {
-        return await refreshFolderContent(node.path);
-      } catch (err) {
-        console.error('Error reading folder:', err);
-        return [];
-      } finally {
-        setLoading(false);
+        watchIdRef.current = await window.electron.startWatchingDirectory(folderPath);
+      } catch (watchError) {
+        console.warn('Folder watching is unavailable:', watchError);
       }
     },
-    [refreshFolderContent]
+    [stopCurrentWatcher]
   );
+
+  const refreshFolderContent = useCallback(async (folderPath: string, expand = false) => {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const content = await window.electron.readDirectory(folderPath);
+      if (requestId !== requestIdRef.current) return [];
+
+      const children = mapFolders(content);
+      const images = mapImages(content, preferencesRef.current.imageMetadata, window.electron.toLocalUrl);
+      setRootFolders((previous) => updateNodeTree(previous, folderPath, (node) => ({
+        ...node,
+        children,
+        isLoaded: true,
+        isExpanded: expand || node.isExpanded,
+        error: content.error,
+      })));
+
+      if (samePath(selectedFolderRef.current, folderPath)) setCurrentImages(images);
+      if (content.error) setError(content.error);
+      return images;
+    } catch (refreshError) {
+      if (requestId === requestIdRef.current) {
+        setError(refreshError instanceof Error ? refreshError.message : 'Unable to read this folder.');
+      }
+      return [];
+    } finally {
+      if (requestId === requestIdRef.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.electron.onDirectoryChanged((folderPath) => {
+      if (samePath(selectedFolderRef.current, folderPath)) void refreshFolderContent(folderPath);
+    });
+    return unsubscribe;
+  }, [refreshFolderContent]);
 
   useEffect(() => {
     let cancelled = false;
 
-    const bootstrapRoots = async () => {
+    const bootstrap = async () => {
       setLoading(true);
       try {
-        const roots = await window.electron.getInitialRoots();
+        const [loadedPreferences, roots] = await Promise.all([
+          window.electron.loadPreferences().catch(() => DEFAULT_PREFERENCES),
+          window.electron.getInitialRoots(),
+        ]);
         if (cancelled) return;
 
+        preferencesRef.current = loadedPreferences;
+        setPreferences(loadedPreferences);
         const rootNodes: FolderNode[] = roots.map((root) => ({
           id: root.path,
           name: root.name,
@@ -115,48 +199,48 @@ export function useImageStore() {
           isLoaded: false,
           isExpanded: false,
         }));
-
         setRootFolders(rootNodes);
 
-        const defaultNode =
-          rootNodes.find((node) => node.name.toLowerCase() === 'downloads') ?? rootNodes[0];
+        const preferredPath = loadedPreferences.defaultFolder && roots.some((root) => samePath(root.path, loadedPreferences.defaultFolder))
+          ? loadedPreferences.defaultFolder
+          : roots.find((root) => root.name.toLowerCase() === 'pictures')?.path
+            ?? roots.find((root) => root.name.toLowerCase() === 'downloads')?.path
+            ?? roots[0]?.path;
+        if (!preferredPath) return;
 
-        if (!defaultNode) return;
-
-        setSelectedFolderId(defaultNode.id);
-        const content = await window.electron.readDirectory(defaultNode.path);
+        const preferredNode = rootNodes.find((node) => samePath(node.path, preferredPath));
+        const content = await window.electron.readDirectory(preferredPath);
         if (cancelled) return;
-
-        const images = mapImages(content);
-        const children = mapFolders(content);
-        setRootFolders((prev) =>
-          updateNodeTree(prev, defaultNode.id, (node) => ({
-            ...node,
-            children,
-            isLoaded: true,
-            isExpanded: true,
-          }))
-        );
+        const images = mapImages(content, loadedPreferences.imageMetadata, window.electron.toLocalUrl);
+        setSelectedFolderId(preferredPath);
+        selectedFolderRef.current = preferredPath;
+        setSelectedFolderLabel(preferredNode?.name ?? preferredPath);
+        setCollectionKind('folder');
         setCurrentImages(images);
-      } catch (err) {
-        console.error('Failed to initialize root folders:', err);
+        setRootFolders((previous) => updateNodeTree(previous, preferredPath, (node) => ({
+          ...node,
+          children: mapFolders(content),
+          isLoaded: true,
+          isExpanded: true,
+          error: content.error,
+        })));
+        if (content.error) setError(content.error);
+        rememberFolder(preferredPath);
+        await watchFolder(preferredPath);
+      } catch (bootstrapError) {
+        if (!cancelled) setError(bootstrapError instanceof Error ? bootstrapError.message : 'Unable to initialize folders.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    bootstrapRoots();
-
+    void bootstrap();
     return () => {
       cancelled = true;
     };
-  }, [mapFolders, mapImages]);
+  }, [rememberFolder, watchFolder]);
 
-  const openDirectory = useCallback(async () => {
-    try {
-      const result = await window.electron.openDirectory();
-      if (!result) return;
-
+  const openFolderResult = useCallback(async (result: { path: string; name: string; content: DirectoryContent }) => {
       const rootNode: FolderNode = {
         id: result.path,
         name: result.name,
@@ -164,70 +248,156 @@ export function useImageStore() {
         children: mapFolders(result.content),
         isLoaded: true,
         isExpanded: true,
+        error: result.content.error,
       };
+      const images = mapImages(result.content, preferencesRef.current.imageMetadata, window.electron.toLocalUrl);
 
-      const images = mapImages(result.content);
-
-      setRootFolders((prev) => {
-        const existingIndex = prev.findIndex((node) => node.id === rootNode.id);
-        if (existingIndex >= 0) {
-          const next = [...prev];
-          next[existingIndex] = rootNode;
-          return next;
-        }
-        return [...prev, rootNode];
+      setRootFolders((previous) => {
+        const existingIndex = previous.findIndex((node) => samePath(node.id, rootNode.id));
+        if (existingIndex < 0) return [...previous, rootNode];
+        const next = [...previous];
+        next[existingIndex] = rootNode;
+        return next;
       });
-
+      selectedFolderRef.current = rootNode.id;
       setSelectedFolderId(rootNode.id);
+      setSelectedFolderLabel(rootNode.name);
+      setCollectionKind('folder');
+      releaseImportedUrls();
       setCurrentImages(images);
-    } catch (err) {
-      console.error('Failed to open directory:', err);
+      setError(result.content.error ?? null);
+      rememberFolder(rootNode.path);
+      await watchFolder(rootNode.path);
+  }, [rememberFolder, releaseImportedUrls, watchFolder]);
+
+  const openDirectory = useCallback(async () => {
+    try {
+      const result = await window.electron.openDirectory();
+      if (!result) return;
+      await openFolderResult(result);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to open this folder.');
     }
-  }, [mapFolders, mapImages]);
+  }, [openFolderResult]);
+
+  const openFileRecords = useCallback(async (files: DirectoryContent['files']) => {
+    if (files.length === 0) return;
+    releaseImportedUrls();
+    const images = mapImages({ files, folders: [] }, preferencesRef.current.imageMetadata, window.electron.toLocalUrl);
+    setSelectedFolderId(null);
+    selectedFolderRef.current = null;
+    setSelectedFolderLabel(`${files.length} selected files`);
+    setCollectionKind('files');
+    setCurrentImages(images);
+    setError(null);
+    await stopCurrentWatcher();
+  }, [releaseImportedUrls, stopCurrentWatcher]);
+
+  const openFiles = useCallback(async () => {
+    try {
+      const files = await window.electron.openImageFiles();
+      await openFileRecords(files);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to open image files.');
+    }
+  }, [openFileRecords]);
+
+  const processFiles = useCallback((files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter((file) => isSupportedImageName(file.name));
+    releaseImportedUrls();
+    if (imageFiles.length === 0) {
+      setError('No supported image files were found.');
+      return;
+    }
+
+    const images = mapImportedFiles(imageFiles, (id) => getMetadataForImage(id, preferencesRef.current.imageMetadata));
+    images.forEach((image) => importedUrlsRef.current.add(image.url));
+    setSelectedFolderId(null);
+    selectedFolderRef.current = null;
+    setSelectedFolderLabel(`${images.length} imported files`);
+    setCollectionKind('imported');
+    setCurrentImages(images);
+    setError(null);
+    void stopCurrentWatcher();
+  }, [releaseImportedUrls, stopCurrentWatcher]);
+
+  useEffect(() => {
+    const unsubscribe = window.electron.onOpenFilesFromArgs((files) => {
+      void openFileRecords(files).catch((openError) => {
+        setError(openError instanceof Error ? openError.message : 'Unable to open image files.');
+      });
+    });
+    return unsubscribe;
+  }, [openFileRecords]);
+
+  useEffect(() => {
+    const unsubscribe = window.electron.onOpenFolderFromArgs((folder) => {
+      void openFolderResult(folder).catch((openError) => {
+        setError(openError instanceof Error ? openError.message : 'Unable to open the requested folder.');
+      });
+    });
+    return unsubscribe;
+  }, [openFolderResult]);
 
   const selectFolder = useCallback(
     async (nodeId: string | null) => {
-      setSelectedFolderId(nodeId);
-      if (!nodeId) return;
-
-      const node = findNodeById(rootFolders, nodeId);
+      if (!nodeId) {
+        releaseImportedUrls();
+        void stopCurrentWatcher();
+        selectedFolderRef.current = null;
+        setSelectedFolderId(null);
+        setSelectedFolderLabel('Home');
+        setCurrentImages([]);
+        return;
+      }
+      const node = findNodeById(rootFoldersRef.current, nodeId);
       if (!node) return;
 
-      const images = await loadFolderContent(node);
-      setCurrentImages(images);
+      selectedFolderRef.current = node.path;
+      setSelectedFolderId(node.path);
+      setSelectedFolderLabel(node.name);
+      setCollectionKind('folder');
+      releaseImportedUrls();
+      rememberFolder(node.path);
+      await refreshFolderContent(node.path, true);
+      await watchFolder(node.path);
     },
-    [rootFolders, loadFolderContent]
+    [refreshFolderContent, rememberFolder, releaseImportedUrls, stopCurrentWatcher, watchFolder]
   );
 
   const toggleFolder = useCallback(
     async (node: FolderNode) => {
       if (node.isExpanded) {
-        setRootFolders((prev) =>
-          updateNodeTree(prev, node.id, (target) => ({ ...target, isExpanded: false }))
-        );
+        setRootFolders((previous) => updateNodeTree(previous, node.id, (target) => ({ ...target, isExpanded: false })));
         return;
       }
-
-      if (!node.isLoaded) {
-        await loadFolderContent(node);
-        return;
-      }
-
-      setRootFolders((prev) =>
-        updateNodeTree(prev, node.id, (target) => ({ ...target, isExpanded: true }))
-      );
+      await refreshFolderContent(node.path, true);
     },
-    [loadFolderContent]
+    [refreshFolderContent]
   );
 
-  const processFiles = useCallback((_files: FileList | File[]) => {
-    // Drag-and-drop local file handling can be added separately.
-  }, []);
-
   const refreshSelectedFolder = useCallback(async () => {
-    if (!selectedFolderId) return;
-    await refreshFolderContent(selectedFolderId);
-  }, [refreshFolderContent, selectedFolderId]);
+    if (!selectedFolderRef.current) return;
+    await refreshFolderContent(selectedFolderRef.current);
+  }, [refreshFolderContent]);
+
+  const updateImageMetadata = useCallback((imageId: string, patch: Partial<ImageMetadata>) => {
+    setPreferences((previous) => {
+      const current = getMetadataForImage(imageId, previous.imageMetadata);
+      const metadata = mergeImageMetadata(current, patch);
+      const next = {
+        ...previous,
+        imageMetadata: { ...previous.imageMetadata, [imageId]: metadata },
+      };
+      persistPreferences(next);
+      return next;
+    });
+    setCurrentImages((previous) => previous.map((image) => (
+      image.id === imageId
+        ? { ...image, metadata: mergeImageMetadata(getMetadataForImage(imageId, image.metadata ? { [imageId]: image.metadata } : {}), patch) }
+        : image
+    )));
+  }, [persistPreferences]);
 
   const copyImageToFolder = useCallback(
     async (sourcePath: string, targetFolderPath: string) => {
@@ -261,20 +431,49 @@ export function useImageStore() {
     [refreshSelectedFolder]
   );
 
+  const runBatchFileOperation = useCallback(
+    async (
+      operation: 'copy' | 'move' | 'delete',
+      sourcePaths: string[],
+      targetFolderPath?: string
+    ): Promise<BatchOperationResult> => {
+      const result = await window.electron.batchFileOperation(operation, sourcePaths, targetFolderPath);
+      await refreshSelectedFolder();
+      return result;
+    },
+    [refreshSelectedFolder]
+  );
+
+  const renameImages = useCallback(async (renames: BatchRenameRequest[]): Promise<BatchOperationResult> => {
+    const result = await window.electron.batchRenameImages(renames);
+    await refreshSelectedFolder();
+    return result;
+  }, [refreshSelectedFolder]);
+
   return {
     images: currentImages,
-    allImages: [],
     folders: rootFolders,
     selectedFolder: selectedFolderId,
+    selectedFolderLabel,
+    collectionKind,
+    preferences,
     setSelectedFolder: selectFolder,
     processFiles,
+    openFiles,
     loading,
+    error,
     openDirectory,
     toggleFolder,
     refreshSelectedFolder,
+    updatePreferences,
+    updateImageMetadata,
     copyImageToFolder,
     moveImageToFolder,
     renameImage,
+    renameImages,
     deleteImage,
+    copyImagesToFolder: (paths: string[], targetFolderPath: string) => runBatchFileOperation('copy', paths, targetFolderPath),
+    moveImagesToFolder: (paths: string[], targetFolderPath: string) => runBatchFileOperation('move', paths, targetFolderPath),
+    deleteImages: (paths: string[]) => runBatchFileOperation('delete', paths),
   };
 }

@@ -1,21 +1,41 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Grid3X3, ArrowUpDown, Search, Image as ImageIcon } from 'lucide-react';
-import type { ImageFile } from '../types';
+import { Grid3X3, ArrowUpDown, Search, Image as ImageIcon, Star } from 'lucide-react';
+import type { BatchOperationResult, BatchRenameRequest, ImageFile, ImageMetadata, SortDirection, SortMode, ViewSize } from '../types';
 import { cn } from '../utils/cn';
 import { IMAGE_DRAG_MIME } from '../constants/drag';
+import { filterAndSortImages, getImageMetadata } from '../domain/image';
+import { selectAll, selectRange, toggleSelection } from '../domain/selection';
+import { BatchRenameDialog } from './BatchRenameDialog';
+import { FilterBar, getFilterOptions, type DateFilter, type FormatFilter, type SizeFilter } from './FilterBar';
+import type { Language } from '../i18n';
+import { t } from '../i18n';
 
 interface ThumbnailGridProps {
   images: ImageFile[];
   currentFolderPath: string | null;
-  onImageClick: (index: number) => void;
-  onCopyImage: (sourcePath: string, targetFolderPath: string) => Promise<void>;
-  onMoveImage: (sourcePath: string, targetFolderPath: string) => Promise<void>;
+  collectionKey: string;
+  onImageClick: (index: number, collection: ImageFile[]) => void;
   onRenameImage: (sourcePath: string, nextName: string) => Promise<void>;
-  onDeleteImage: (sourcePath: string) => Promise<void>;
+  onRenameImages: (renames: BatchRenameRequest[]) => Promise<BatchOperationResult>;
+  onCopyImages: (sourcePaths: string[], targetFolderPath: string) => Promise<BatchOperationResult>;
+  onMoveImages: (sourcePaths: string[], targetFolderPath: string) => Promise<BatchOperationResult>;
+  onDeleteImages: (sourcePaths: string[]) => Promise<BatchOperationResult>;
+  onUpdateImageMetadata: (imageId: string, patch: Partial<ImageMetadata>) => void;
+  confirmDelete: boolean;
+  viewPreferences?: {
+    viewSize: ViewSize;
+    sortMode: SortMode;
+    sortDirection: SortDirection;
+  };
+  onViewPreferencesChange?: (patch: Partial<ViewPreferences>) => void;
+  language?: Language;
 }
 
-type SortMode = 'name' | 'size' | 'date';
-type ViewSize = 'small' | 'medium' | 'large';
+interface ViewPreferences {
+  viewSize: ViewSize;
+  sortMode: SortMode;
+  sortDirection: SortDirection;
+}
 
 interface ContextMenuState {
   x: number;
@@ -78,6 +98,39 @@ function ThumbnailItem({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(image.thumbnailUrl ?? null);
+  const thumbnailRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (image.source === 'import' || !image.path || image.thumbnailUrl) return;
+    const node = thumbnailRef.current;
+    if (!node) return;
+    let active = true;
+    let observer: IntersectionObserver | null = null;
+    const loadThumbnail = () => {
+      void window.electron
+        .getThumbnailUrl(image.path, 320)
+        .then((url) => {
+          if (active) setThumbnailUrl(url);
+        })
+        .catch(() => undefined);
+    };
+    if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadThumbnail();
+          observer?.disconnect();
+        }
+      }, { rootMargin: '300px' });
+      observer.observe(node);
+    } else {
+      loadThumbnail();
+    }
+    return () => {
+      active = false;
+      observer?.disconnect();
+    };
+  }, [image.path, image.source, image.thumbnailUrl]);
 
   const sizeClasses = {
     small: 'h-28',
@@ -102,7 +155,7 @@ function ThumbnailItem({
       )}
       title="Click select, Ctrl+Click multi-select, Double-click open. Keyboard: F2/Ctrl+C/X/V/Arrows/Enter/Delete/Esc"
     >
-      <div className={cn('relative w-full overflow-hidden bg-gray-900', sizeClasses[viewSize])}>
+      <div ref={thumbnailRef} className={cn('relative w-full overflow-hidden bg-gray-900', sizeClasses[viewSize])}>
         {!loaded && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
@@ -114,7 +167,7 @@ function ThumbnailItem({
           </div>
         ) : (
           <img
-            src={image.url}
+            src={thumbnailUrl || image.url}
             alt={image.name}
             loading="lazy"
             className={cn(
@@ -122,13 +175,19 @@ function ThumbnailItem({
               !loaded && 'opacity-0'
             )}
             onLoad={() => setLoaded(true)}
-            onError={() => setError(true)}
+            onError={() => {
+              if (thumbnailUrl) setThumbnailUrl(null);
+              else setError(true);
+            }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="absolute bottom-0 left-0 right-0 translate-y-full p-2 transition-transform group-hover:translate-y-0">
           <p className="text-xs text-gray-300">{formatSize(image.size)}</p>
         </div>
+        {getImageMetadata(image).favorite && (
+          <Star size={14} fill="currentColor" className="absolute right-2 top-2 text-yellow-300 drop-shadow" />
+        )}
       </div>
       <div className="w-full px-2 py-1.5">
         <p className="truncate text-left text-xs text-gray-300">{image.name}</p>
@@ -140,19 +199,36 @@ function ThumbnailItem({
 export function ThumbnailGrid({
   images,
   currentFolderPath,
+  collectionKey,
   onImageClick,
-  onCopyImage,
-  onMoveImage,
   onRenameImage,
-  onDeleteImage,
+  onRenameImages,
+  onCopyImages,
+  onMoveImages,
+  onDeleteImages,
+  onUpdateImageMetadata,
+  confirmDelete,
+  viewPreferences,
+  onViewPreferencesChange,
+  language = 'en',
 }: ThumbnailGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('name');
-  const [viewSize, setViewSize] = useState<ViewSize>('medium');
+  const [sortMode, setSortMode] = useState<SortMode>(viewPreferences?.sortMode ?? 'name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>(viewPreferences?.sortDirection ?? 'asc');
+  const [viewSize, setViewSize] = useState<ViewSize>(viewPreferences?.viewSize ?? 'medium');
+  const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
+  const [sizeFilter, setSizeFilter] = useState<SizeFilter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [minimumRating, setMinimumRating] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [anchorId, setAnchorId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [tagDraft, setTagDraft] = useState('');
+  const [colorLabelDraft, setColorLabelDraft] = useState('');
   const [renameDialog, setRenameDialog] = useState<RenameDialogState | null>(null);
+  const [batchRenameOpen, setBatchRenameOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -160,37 +236,33 @@ export function ThumbnailGrid({
   const [gridFocused, setGridFocused] = useState(false);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const filtered = useMemo(() => {
-    let result = [...images];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((img) => img.name.toLowerCase().includes(q));
-    }
-    result.sort((a, b) => {
-      switch (sortMode) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'size':
-          return b.size - a.size;
-        case 'date':
-          return b.lastModified - a.lastModified;
-        default:
-          return 0;
-      }
-    });
-    return result;
-  }, [images, searchQuery, sortMode]);
+  const filtered = useMemo(() => filterAndSortImages(
+    images,
+    searchQuery,
+    sortMode,
+    sortDirection,
+    favoriteOnly,
+    minimumRating,
+    getFilterOptions(formatFilter, sizeFilter, dateFilter)
+  ), [dateFilter, favoriteOnly, formatFilter, images, minimumRating, searchQuery, sizeFilter, sortDirection, sortMode]);
 
   const filteredIdSet = useMemo(() => new Set(filtered.map((img) => img.id)), [filtered]);
   const selectedImages = useMemo(
     () => filtered.filter((img) => selectedIds.has(img.id)),
     [filtered, selectedIds]
   );
-  const activeImage = activeIndex !== null && activeIndex >= 0 ? filtered[activeIndex] ?? null : null;
+  const activeIndex = activeId ? filtered.findIndex((image) => image.id === activeId) : -1;
+  const activeImage = activeIndex >= 0 ? filtered[activeIndex] ?? null : null;
 
   const showStatus = useCallback((message: string) => {
     setStatusMessage(message);
   }, []);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setActiveId(null);
+    setAnchorId(null);
+  }, [collectionKey]);
 
   useEffect(() => {
     if (!statusMessage) return;
@@ -208,13 +280,13 @@ export function ThumbnailGrid({
 
   useEffect(() => {
     if (filtered.length === 0) {
-      setActiveIndex(null);
+      setActiveId(null);
       return;
     }
-    setActiveIndex((prev) => {
-      if (prev !== null && prev >= 0 && prev < filtered.length) return prev;
-      const selectedIndex = filtered.findIndex((img) => selectedIds.has(img.id));
-      return selectedIndex >= 0 ? selectedIndex : 0;
+    setActiveId((previous) => {
+      if (previous && filtered.some((image) => image.id === previous)) return previous;
+      const selectedImage = filtered.find((image) => selectedIds.has(image.id));
+      return selectedImage?.id ?? filtered[0]?.id ?? null;
     });
   }, [filtered, selectedIds]);
 
@@ -268,37 +340,35 @@ export function ThumbnailGrid({
   const runBatchOperation = useCallback(
     async (
       targets: ImageFile[],
-      operation: (img: ImageFile) => Promise<void>,
+      operation: (paths: string[]) => Promise<BatchOperationResult>,
       successMessage: string
     ) => {
-      if (targets.length === 0) {
-        showStatus('No image selected.');
+      const persistedTargets = targets.filter((image) => image.source === 'folder' && image.path);
+      if (persistedTargets.length === 0) {
+        showStatus('No image selected. Imported files must be saved first.');
         return;
       }
 
       setBusy(true);
-      const failures: Array<{ img: ImageFile; reason: unknown }> = [];
+      let result: BatchOperationResult = { succeeded: [], failed: [] };
       try {
-        for (const img of targets) {
-          try {
-            await operation(img);
-          } catch (error) {
-            failures.push({ img, reason: error });
-          }
-        }
+        result = await operation(persistedTargets.map((image) => image.path));
+      } catch (error) {
+        result.failed.push({
+          sourcePath: '',
+          error: error instanceof Error ? error.message : 'File operation failed.',
+        });
       } finally {
         setBusy(false);
       }
 
-      if (failures.length > 0) {
-        const first = failures[0];
-        const message =
-          first.reason instanceof Error ? first.reason.message : 'Unknown file operation error.';
-        showStatus(`Completed with ${failures.length} failure(s).`);
-        alert(`Some operations failed.\nFirst failure: ${first.img.name}\n${message}`);
+      if (result.failed.length > 0) {
+        const first = result.failed[0];
+        showStatus(`${result.succeeded.length} completed, ${result.failed.length} failed.`);
+        setStatusMessage(`${first.error ?? 'Some file operations failed.'}`);
         return;
       }
-      showStatus(successMessage);
+      showStatus(`${successMessage} (${result.succeeded.length})`);
     },
     [showStatus]
   );
@@ -308,47 +378,92 @@ export function ThumbnailGrid({
     return picked?.path ?? null;
   }, []);
 
+  useEffect(() => {
+    if (!viewPreferences) return;
+    setViewSize(viewPreferences.viewSize);
+    setSortMode(viewPreferences.sortMode);
+    setSortDirection(viewPreferences.sortDirection);
+  }, [viewPreferences?.sortDirection, viewPreferences?.sortMode, viewPreferences?.viewSize]);
+
+  const changeViewSize = useCallback((size: ViewSize) => {
+    setViewSize(size);
+    onViewPreferencesChange?.({ viewSize: size });
+  }, [onViewPreferencesChange]);
+
+  const changeSortMode = useCallback(() => {
+    const modes: SortMode[] = ['name', 'size', 'date', 'rating'];
+    const nextMode = modes[(modes.indexOf(sortMode) + 1) % modes.length];
+    setSortMode(nextMode);
+    onViewPreferencesChange?.({ sortMode: nextMode });
+  }, [onViewPreferencesChange, sortMode]);
+
+  const changeSortDirection = useCallback(() => {
+    const nextDirection: SortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortDirection(nextDirection);
+    onViewPreferencesChange?.({ sortDirection: nextDirection });
+  }, [onViewPreferencesChange, sortDirection]);
+
   const openImageByIndex = useCallback(
     (filteredIndex: number) => {
       const img = filtered[filteredIndex];
       if (!img) return;
       setSelectedIds(new Set([img.id]));
-      setActiveIndex(filteredIndex);
-      const originalIndex = images.findIndex((i) => i.id === img.id);
-      if (originalIndex >= 0) onImageClick(originalIndex);
+      setAnchorId(img.id);
+      setActiveId(img.id);
+      onImageClick(filteredIndex, filtered);
     },
-    [filtered, images, onImageClick]
+    [filtered, onImageClick]
   );
 
-  const handleSelectClick = useCallback((e: React.MouseEvent, image: ImageFile, index: number) => {
+  const handleSelectClick = useCallback((e: React.MouseEvent, image: ImageFile) => {
     const multiSelect = e.ctrlKey || e.metaKey;
-    setActiveIndex(index);
-    setSelectedIds((prev) => {
-      if (!multiSelect) {
-        return new Set([image.id]);
-      }
-
-      const next = new Set(prev);
-      if (next.has(image.id)) {
-        next.delete(image.id);
-      } else {
-        next.add(image.id);
-      }
-      return next;
-    });
-  }, []);
+    setActiveId(image.id);
+    if (e.shiftKey) {
+      const range = selectRange(filtered, anchorId, image.id);
+      setSelectedIds((previous) => (multiSelect ? new Set([...previous, ...range]) : range));
+    } else {
+      setSelectedIds((previous) => toggleSelection(previous, image.id, multiSelect));
+    }
+    setAnchorId(image.id);
+  }, [anchorId, filtered]);
 
   const handleDragStart = useCallback((e: React.DragEvent, image: ImageFile) => {
     e.dataTransfer.effectAllowed = 'copyMove';
-    e.dataTransfer.setData(IMAGE_DRAG_MIME, image.path);
+    const paths = (selectedIds.has(image.id) ? selectedImages : [image])
+      .filter((target) => target.source === 'folder' && target.path)
+      .map((target) => target.path);
+    e.dataTransfer.setData(IMAGE_DRAG_MIME, JSON.stringify(paths));
     e.dataTransfer.setData('text/plain', image.path);
-  }, []);
+  }, [selectedIds, selectedImages]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, image: ImageFile) => {
     e.preventDefault();
     setSelectedIds((prev) => (prev.has(image.id) ? prev : new Set([image.id])));
+    setAnchorId(image.id);
+    setTagDraft(getImageMetadata(image).tags.join(', '));
+    setColorLabelDraft(getImageMetadata(image).colorLabel ?? '');
     setContextMenu({ x: e.clientX, y: e.clientY, image });
   }, []);
+
+  const saveMetadataDraft = useCallback(() => {
+    if (!contextMenu) return;
+    onUpdateImageMetadata(contextMenu.image.id, {
+      tags: tagDraft.split(',').map((tag) => tag.trim()).filter(Boolean),
+      colorLabel: colorLabelDraft || null,
+    });
+    showStatus('Metadata saved.');
+    setContextMenu(null);
+  }, [colorLabelDraft, contextMenu, onUpdateImageMetadata, showStatus, tagDraft]);
+
+  const toggleFavorite = useCallback((image: ImageFile) => {
+    onUpdateImageMetadata(image.id, { favorite: !getImageMetadata(image).favorite });
+    showStatus(getImageMetadata(image).favorite ? 'Removed from favorites.' : 'Added to favorites.');
+  }, [onUpdateImageMetadata, showStatus]);
+
+  const setImageRating = useCallback((image: ImageFile, rating: number) => {
+    onUpdateImageMetadata(image.id, { rating });
+    showStatus(`Rating set to ${rating}/5.`);
+  }, [onUpdateImageMetadata, showStatus]);
 
   const openRenameDialog = useCallback(
     (target: ImageFile | null) => {
@@ -367,33 +482,33 @@ export function ThumbnailGrid({
 
   const handleCopyToFolder = useCallback(async () => {
     if (!contextMenu) return;
-    const targets = getActionImages(contextMenu.image);
+    const targets = getActionImages(contextMenu.image).filter((image) => image.source === 'folder' && image.path);
     const targetFolderPath = await chooseTargetFolder();
     if (!targetFolderPath) return;
     setContextMenu(null);
     await runBatchOperation(
       targets,
-      (img) => onCopyImage(img.path, targetFolderPath),
+      (paths) => onCopyImages(paths, targetFolderPath),
       `${targets.length} image(s) copied.`
     );
-  }, [chooseTargetFolder, contextMenu, getActionImages, onCopyImage, runBatchOperation]);
+  }, [chooseTargetFolder, contextMenu, getActionImages, onCopyImages, runBatchOperation]);
 
   const handleMoveToFolder = useCallback(async () => {
     if (!contextMenu) return;
-    const targets = getActionImages(contextMenu.image);
+    const targets = getActionImages(contextMenu.image).filter((image) => image.source === 'folder' && image.path);
     const targetFolderPath = await chooseTargetFolder();
     if (!targetFolderPath) return;
     setContextMenu(null);
     await runBatchOperation(
       targets,
-      (img) => onMoveImage(img.path, targetFolderPath),
+      (paths) => onMoveImages(paths, targetFolderPath),
       `${targets.length} image(s) moved.`
     );
-  }, [chooseTargetFolder, contextMenu, getActionImages, onMoveImage, runBatchOperation]);
+  }, [chooseTargetFolder, contextMenu, getActionImages, onMoveImages, runBatchOperation]);
 
   const handleRenameFromMenu = useCallback(() => {
     if (!contextMenu) return;
-    const targets = getActionImages(contextMenu.image);
+    const targets = getActionImages(contextMenu.image).filter((image) => image.source === 'folder' && image.path);
     setContextMenu(null);
     if (targets.length !== 1) {
       showStatus('Rename is available for one image at a time.');
@@ -404,14 +519,19 @@ export function ThumbnailGrid({
 
   const handleDeleteFromMenu = useCallback(() => {
     if (!contextMenu) return;
-    const targets = getActionImages(contextMenu.image);
+    const targets = getActionImages(contextMenu.image).filter((image) => image.source === 'folder' && image.path);
     setContextMenu(null);
     if (targets.length === 0) {
       showStatus('No image selected.');
       return;
     }
+    if (!confirmDelete) {
+      void runBatchOperation(targets, (paths) => onDeleteImages(paths), `${targets.length} image(s) moved to Recycle Bin.`);
+      setSelectedIds(new Set());
+      return;
+    }
     setDeleteDialog({ images: targets });
-  }, [contextMenu, getActionImages, showStatus]);
+  }, [confirmDelete, contextMenu, getActionImages, onDeleteImages, runBatchOperation, showStatus]);
 
   const submitRename = useCallback(async () => {
     if (!renameDialog) return;
@@ -440,26 +560,44 @@ export function ThumbnailGrid({
     }
   }, [onRenameImage, renameDialog, showStatus]);
 
+  const submitBatchRename = useCallback(async (renames: Array<{ image: ImageFile; nextName: string }>) => {
+    setBusy(true);
+    let result: BatchOperationResult = { succeeded: [], failed: [] };
+    try {
+      result = await onRenameImages(renames.map(({ image, nextName }) => ({ sourcePath: image.path, nextName })));
+    } catch (error) {
+      result.failed.push({ sourcePath: '', error: error instanceof Error ? error.message : 'Rename failed.' });
+    } finally {
+      setBusy(false);
+    }
+    setBatchRenameOpen(false);
+    if (result.failed.length > 0) {
+      setStatusMessage(`${result.succeeded.length} renamed, ${result.failed.length} failed. ${result.failed[0].error ?? ''}`);
+    } else {
+      showStatus(`${result.succeeded.length} files renamed.`);
+    }
+  }, [onRenameImages, showStatus]);
+
   const submitDelete = useCallback(async () => {
     if (!deleteDialog) return;
     const targets = deleteDialog.images;
     setDeleteDialog(null);
     await runBatchOperation(
       targets,
-      (img) => onDeleteImage(img.path),
+      (paths) => onDeleteImages(paths),
       `${targets.length} image(s) moved to Recycle Bin.`
     );
     setSelectedIds(new Set());
-  }, [deleteDialog, onDeleteImage, runBatchOperation]);
+  }, [deleteDialog, onDeleteImages, runBatchOperation]);
 
   const moveActive = useCallback(
     (delta: number, keepSelection: boolean) => {
       if (filtered.length === 0) return;
-      const start = activeIndex ?? Math.max(0, filtered.findIndex((img) => selectedIds.has(img.id)));
+      const start = activeIndex >= 0 ? activeIndex : Math.max(0, filtered.findIndex((img) => selectedIds.has(img.id)));
       const safeStart = start < 0 ? 0 : start;
       const nextIndex = Math.max(0, Math.min(filtered.length - 1, safeStart + delta));
       const nextImage = filtered[nextIndex];
-      setActiveIndex(nextIndex);
+      setActiveId(nextImage?.id ?? null);
       if (!keepSelection && nextImage) {
         setSelectedIds(new Set([nextImage.id]));
       }
@@ -469,9 +607,9 @@ export function ThumbnailGrid({
 
   const copyOrCutSelection = useCallback(
     (mode: 'copy' | 'cut') => {
-      const targets = getActionImages();
+      const targets = getActionImages().filter((image) => image.source === 'folder' && image.path);
       if (targets.length === 0) {
-        showStatus('No image selected.');
+        showStatus('No saved image selected. Imported files must be saved first.');
         return;
       }
       setClipboard({
@@ -493,31 +631,29 @@ export function ThumbnailGrid({
       return;
     }
 
-    const targets = clipboard.items.map((item) => ({
-      id: item.path,
-      name: item.name,
-      path: item.path,
-      url: '',
-      size: 0,
-      type: '',
-      lastModified: 0,
-    })) as ImageFile[];
-
     const mode = clipboard.mode;
-    await runBatchOperation(
-      targets,
-      (img) =>
-        mode === 'copy'
-          ? onCopyImage(img.path, currentFolderPath)
-          : onMoveImage(img.path, currentFolderPath),
-      `${targets.length} image(s) ${mode === 'copy' ? 'pasted' : 'moved'}.`
-    );
+    const paths = clipboard.items.map((item) => item.path);
+    setBusy(true);
+    try {
+      const result = mode === 'copy'
+        ? await onCopyImages(paths, currentFolderPath)
+        : await onMoveImages(paths, currentFolderPath);
+      if (result.failed.length > 0) {
+        showStatus(`${result.succeeded.length} completed, ${result.failed.length} failed.`);
+      } else {
+        showStatus(`${paths.length} image(s) ${mode === 'copy' ? 'pasted' : 'moved'}.`);
+      }
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Paste failed.');
+    } finally {
+      setBusy(false);
+    }
 
     if (mode === 'cut') {
       setClipboard(null);
       setSelectedIds(new Set());
     }
-  }, [clipboard, currentFolderPath, onCopyImage, onMoveImage, runBatchOperation, showStatus]);
+  }, [clipboard, currentFolderPath, onCopyImages, onMoveImages, showStatus]);
 
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -544,9 +680,17 @@ export function ThumbnailGrid({
         return;
       }
 
+      if (ctrl && lower === 'a') {
+        e.preventDefault();
+        setSelectedIds(selectAll(filtered));
+        setAnchorId(filtered[0]?.id ?? null);
+        setActiveId(filtered[0]?.id ?? null);
+        return;
+      }
+
       if (key === 'F2') {
         e.preventDefault();
-        const targets = getActionImages();
+        const targets = getActionImages().filter((image) => image.source === 'folder' && image.path);
         if (targets.length !== 1) {
           showStatus('Rename is available for one image at a time.');
           return;
@@ -557,18 +701,23 @@ export function ThumbnailGrid({
 
       if (key === 'Delete') {
         e.preventDefault();
-        const targets = getActionImages();
+        const targets = getActionImages().filter((image) => image.source === 'folder' && image.path);
         if (targets.length === 0) {
           showStatus('No image selected.');
           return;
         }
-        setDeleteDialog({ images: targets });
+        if (!confirmDelete) {
+          void runBatchOperation(targets, (paths) => onDeleteImages(paths), `${targets.length} image(s) moved to Recycle Bin.`);
+          setSelectedIds(new Set());
+        } else {
+          setDeleteDialog({ images: targets });
+        }
         return;
       }
 
       if (key === 'Enter') {
         e.preventDefault();
-        if (activeIndex !== null) {
+        if (activeIndex >= 0) {
           openImageByIndex(activeIndex);
         } else if (filtered.length > 0) {
           openImageByIndex(0);
@@ -582,7 +731,8 @@ export function ThumbnailGrid({
         setRenameDialog(null);
         setDeleteDialog(null);
         setSelectedIds(new Set());
-        setActiveIndex(null);
+        setActiveId(null);
+        setAnchorId(null);
         showStatus('Selection cleared.');
         return;
       }
@@ -615,9 +765,12 @@ export function ThumbnailGrid({
       getActionImages,
       getGridColumnCount,
       moveActive,
+      onDeleteImages,
       openImageByIndex,
       openRenameDialog,
       pasteClipboard,
+      confirmDelete,
+      runBatchOperation,
       showStatus,
     ]
   );
@@ -631,7 +784,7 @@ export function ThumbnailGrid({
   const menuPosition = useMemo(() => {
     if (!contextMenu) return null;
     const menuWidth = 220;
-    const menuHeight = 180;
+    const menuHeight = 430;
     const maxX = Math.max(8, window.innerWidth - menuWidth - 8);
     const maxY = Math.max(8, window.innerHeight - menuHeight - 8);
     return {
@@ -663,7 +816,7 @@ export function ThumbnailGrid({
           {(['small', 'medium', 'large'] as ViewSize[]).map((size) => (
             <button
               key={size}
-              onClick={() => setViewSize(size)}
+              onClick={() => changeViewSize(size)}
               className={cn(
                 'rounded px-2 py-1 text-xs transition-colors',
                 viewSize === size ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
@@ -676,15 +829,19 @@ export function ThumbnailGrid({
 
         <div className="flex items-center gap-1">
           <button
-            onClick={() => {
-              const modes: SortMode[] = ['name', 'size', 'date'];
-              const idx = modes.indexOf(sortMode);
-              setSortMode(modes[(idx + 1) % modes.length]);
-            }}
+            onClick={changeSortMode}
             className="flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700"
+            title="Change sort field"
           >
             <ArrowUpDown size={12} />
-            {sortMode === 'name' ? 'Name' : sortMode === 'size' ? 'Size' : 'Date'}
+            {sortMode === 'name' ? 'Name' : sortMode === 'size' ? 'Size' : sortMode === 'date' ? 'Date' : 'Rating'}
+          </button>
+          <button
+            onClick={changeSortDirection}
+            className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs text-gray-300 hover:bg-gray-700"
+            title="Toggle sort direction"
+          >
+            {sortDirection === 'asc' ? '↑' : '↓'}
           </button>
         </div>
 
@@ -694,12 +851,41 @@ export function ThumbnailGrid({
             ? `${selectedIds.size} selected / ${filtered.length} items`
             : `${filtered.length} items`}
         </div>
+        {selectedImages.length > 1 && (
+          <button
+            onClick={() => setBatchRenameOpen(true)}
+            className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs text-gray-300 hover:bg-gray-700"
+          >
+            {t(language, 'batchRename')}
+          </button>
+        )}
       </div>
+
+      <FilterBar
+        format={formatFilter}
+        size={sizeFilter}
+        date={dateFilter}
+        favoriteOnly={favoriteOnly}
+        minimumRating={minimumRating}
+        onFormatChange={setFormatFilter}
+        onSizeChange={setSizeFilter}
+        onDateChange={setDateFilter}
+        onFavoriteChange={setFavoriteOnly}
+        onMinimumRatingChange={setMinimumRating}
+        language={language}
+        onClear={() => {
+          setFormatFilter('all');
+          setSizeFilter('all');
+          setDateFilter('all');
+          setFavoriteOnly(false);
+          setMinimumRating(0);
+        }}
+      />
 
       <div className="border-b border-gray-800 bg-gray-900/60 px-4 py-1 text-xs text-gray-400">
         {clipboard
           ? `Clipboard: ${clipboard.items.length} image(s) ${clipboard.mode === 'copy' ? 'copied' : 'cut'}`
-          : 'Keyboard: F2 Rename | Ctrl+C Copy | Ctrl+X Cut | Ctrl+V Paste | Enter Open | Delete | Esc'}
+            : 'Keyboard: Shift range | Ctrl+A select all | F2 Rename | Ctrl+C/X/V | Enter Open | Delete | Esc'}
       </div>
 
       {statusMessage && (
@@ -717,7 +903,8 @@ export function ThumbnailGrid({
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedIds(new Set());
-              setActiveIndex(null);
+              setActiveId(null);
+              setAnchorId(null);
             }
           }}
           className={cn(
@@ -731,9 +918,9 @@ export function ThumbnailGrid({
               key={image.id}
               image={image}
               index={index}
-              active={activeIndex === index}
+              active={activeId === image.id}
               selected={selectedIds.has(image.id)}
-              dimmedForCut={cutIdSet.has(image.id)}
+              dimmedForCut={cutIdSet.has(image.path)}
               disabled={busy}
               viewSize={viewSize}
               onClick={handleSelectClick}
@@ -770,6 +957,72 @@ export function ThumbnailGrid({
             {contextMenu.image.name}
           </div>
           <button
+            onClick={() => {
+              toggleFavorite(contextMenu.image);
+              setContextMenu(null);
+            }}
+            disabled={busy}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-yellow-200 transition-colors hover:bg-gray-700 disabled:opacity-60"
+          >
+            <Star size={14} fill={getImageMetadata(contextMenu.image).favorite ? 'currentColor' : 'none'} />
+            {getImageMetadata(contextMenu.image).favorite ? 'Remove Favorite' : 'Add Favorite'}
+          </button>
+          <div className="flex items-center gap-1 border-b border-gray-700 px-3 py-2">
+            <span className="mr-1 text-xs text-gray-400">Rating</span>
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <button
+                key={rating}
+                onClick={() => {
+                  setImageRating(contextMenu.image, rating);
+                  setContextMenu(null);
+                }}
+                className={cn(
+                  'text-sm',
+                  getImageMetadata(contextMenu.image).rating >= rating ? 'text-yellow-300' : 'text-gray-600 hover:text-yellow-200'
+                )}
+                title={`${rating}/5`}
+              >
+                ★
+              </button>
+              ))}
+            </div>
+          <div className="space-y-2 border-b border-gray-700 px-3 py-2">
+            <label className="flex items-center justify-between gap-2 text-xs text-gray-400">
+              Label
+              <select
+                value={colorLabelDraft}
+                onChange={(event) => setColorLabelDraft(event.target.value)}
+                className="rounded border border-gray-600 bg-gray-800 px-1.5 py-1 text-xs text-gray-200"
+              >
+                <option value="">None</option>
+                <option value="red">Red</option>
+                <option value="orange">Orange</option>
+                <option value="yellow">Yellow</option>
+                <option value="green">Green</option>
+                <option value="blue">Blue</option>
+                <option value="purple">Purple</option>
+              </select>
+            </label>
+            <label className="block text-xs text-gray-400">
+              Tags (comma separated)
+              <input
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    saveMetadataDraft();
+                  }
+                }}
+                className="mt-1 w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-200 focus:border-blue-500 focus:outline-none"
+                placeholder="travel, family"
+              />
+            </label>
+            <button onClick={saveMetadataDraft} className="w-full rounded bg-blue-700 px-2 py-1 text-xs text-white hover:bg-blue-600">
+              Save metadata
+            </button>
+          </div>
+          <button
             onClick={() => void handleCopyToFolder()}
             disabled={busy}
             className="w-full px-3 py-2 text-left text-sm text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-wait disabled:opacity-60"
@@ -798,6 +1051,15 @@ export function ThumbnailGrid({
             Delete
           </button>
         </div>
+      )}
+
+      {batchRenameOpen && (
+        <BatchRenameDialog
+          images={selectedImages.filter((image) => image.source === 'folder' && image.path)}
+          busy={busy}
+          onClose={() => setBatchRenameOpen(false)}
+          onSubmit={submitBatchRename}
+        />
       )}
 
       {renameDialog && (
