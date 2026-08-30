@@ -22,8 +22,8 @@
 ## 배포 산출물
 
 - 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.1-Windows-Portable.exe`
-- 크기: 75,648,992 bytes
-- SHA-256: `25BFF73D98B16545727755FED0E95F0F43B53C9AD9C61C691ACD93BA9D3B0E8F`
+- 크기: 75,648,461 bytes
+- SHA-256: `9480D0106B0DDCCF65CDC242D2D5B852EE79797D31FB3454135D44FE675A0DF4`
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
