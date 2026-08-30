@@ -67,4 +67,4 @@
 - 같은 검증된 소스·문서·실행파일을 Y: checkout에 복사했습니다.
 - `v2.0.1` 업데이트 자산은 GitHub API에서 `uploaded` 상태와 SHA-256 digest를 확인했고, Y: 실행파일 해시도 L:과 일치했습니다.
 - `v2.0.1`부터는 `vX.Y.Z` 태그 push 시 자동 배포하도록 GitHub Actions workflow를 추가했습니다.
-- `v2.0.2` CI 자산은 GitHub Release에서 내려받아 L:에 반영했으며, 이후 Y: 실행파일도 동일 해시로 동기화합니다.
+- `v2.0.2` CI 자산은 GitHub Release에서 내려받아 L:에 반영했고, Y: 실행파일도 동일 SHA-256으로 동기화했습니다.
