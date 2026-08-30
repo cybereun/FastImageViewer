@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7fbff" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="FastImage — 폴더를 빠르게 탐색하고, 이미지를 안전하게 정리하는 Windows용 로컬 우선 이미지 워크스페이스."
+    />
+    <meta property="og:title" content="FastImage — 이미지와 함께 일하는 더 빠른 흐름" />
+    <meta
+      property="og:description"
+      content="로컬 폴더에서 시작해 로컬에서 끝나는 FastImage 2.0을 만나보세요."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231D65F4'/%3E%3Cpath d='M7 23l6-8 4 5 4-6 5 9H7z' fill='white'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='white'/%3E%3C%2Fsvg%3E" />
+    <title>FastImage — 빠른 로컬 이미지 워크스페이스</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="#top" aria-label="FastImage 처음으로">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 8.5A4.5 4.5 0 0 1 8.5 4H15l3.1 3.2H23.5A4.5 4.5 0 0 1 28 11.7v11.8a4.5 4.5 0 0 1-4.5 4.5h-15A4.5 4.5 0 0 1 4 23.5V8.5Z" fill="url(#brand-gradient)" />
+              <path d="m9 22 4.3-5.2 3.2 3.7 2.6-3.1L23 22H9Z" fill="white" fill-opacity=".92" />
+              <circle cx="21.2" cy="11.7" r="2.1" fill="white" fill-opacity=".92" />
+              <defs>
+                <linearGradient id="brand-gradient" x1="5" y1="5" x2="27" y2="27" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#1D65F4" />
+                  <stop offset="1" stop-color="#7E5BEF" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="brand-name">FastImage</span>
+          <span class="brand-version">2.0.6</span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+          <span class="sr-only">메뉴 열기</span>
+          <span class="nav-toggle-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+
+        <nav class="primary-nav" id="primary-nav" aria-label="주요 메뉴">
+          <a href="#features">핵심 기능</a>
+          <a href="#experience">로컬 우선</a>
+          <a href="#releases">릴리즈</a>
+          <a href="#faq">FAQ</a>
+          <a class="nav-link-cta" href="#releases">다운로드 <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
+        <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
+        <div class="hero-grid-lines" aria-hidden="true"></div>
+
+        <div class="container hero-layout">
+          <div class="hero-copy" data-reveal>
+            <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> LOCAL-FIRST IMAGE WORKSPACE</p>
+            <h1 id="hero-title">이미지를 다루는 일이<br /><span class="gradient-text">더 가벼워집니다.</span></h1>
+            <p class="hero-lede">
+              폴더를 열고, 찾고, 고르고, 정리하는 모든 순간을 한곳에서.<br class="desktop-only" />
+              FastImage는 Windows를 위한 빠른 로컬 이미지 브라우저입니다.
+            </p>
+
+            <div class="hero-actions">
+              <a
+                class="button button-primary"
+                href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.6/FastImage-2.0.6-Windows-Setup.exe"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <span class="button-icon" aria-hidden="true">↓</span>
+                <span><strong>Windows 설치파일</strong><small>v2.0.6 · Setup</small></span>
+              </a>
+              <a
+                class="button button-secondary"
+                href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.6/FastImage-2.0.6-Windows-Portable.exe"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <span><strong>포터블로 시작</strong><small>설치 없이 바로 실행</small></span>
+                <span class="button-arrow" aria-hidden="true">↗</span>
+              </a>
+            </div>
+
+            <div class="hero-note">
+              <span class="note-check" aria-hidden="true">✓</span>
+              설치형 · 포터블 제공 · Windows 10/11 · x64
+            </div>
+
+            <div class="hero-meta">
+              <span><strong>v2.0.6</strong> 현재 추천</span>
+              <span class="meta-separator" aria-hidden="true">·</span>
+              <a href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.6" target="_blank" rel="noopener noreferrer">
+                릴리즈 노트 보기 <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="hero-visual" data-reveal>
+            <div class="visual-caption">
+              <span class="caption-pulse" aria-hidden="true"></span>
+              LIVE WORKSPACE PREVIEW
+              <span>FastImage 2.0.6</span>
+            </div>
+
+            <div class="product-window" role="img" aria-label="FastImage의 폴더 탐색과 썸네일 화면 미리보기">
+              <div class="window-bar">
+                <span class="window-brand"><span class="window-brand-mark" aria-hidden="true">✦</span> FastImage</span>
+                <span class="window-path">Pictures / 2026 / Selects</span>
+                <span class="window-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+              </div>
+
+              <div class="app-shell">
+                <aside class="app-sidebar" aria-hidden="true">
+                  <div class="sidebar-caption">COLLECTIONS <span>＋</span></div>
+                  <div class="sidebar-folder is-selected"><span class="sidebar-folder-icon">▦</span><span>모든 이미지</span><b>59</b></div>
+                  <div class="sidebar-folder"><span class="sidebar-folder-icon">☆</span><span>즐겨찾기</span><b>12</b></div>
+                  <div class="sidebar-folder"><span class="sidebar-folder-icon">◌</span><span>최근 추가</span><b>08</b></div>
+                  <div class="sidebar-rule"></div>
+                  <div class="sidebar-caption">FOLDERS <span>⌃</span></div>
+                  <div class="sidebar-folder sidebar-folder-sub"><span class="sidebar-folder-icon">⌄</span><span>내 사진</span></div>
+                  <div class="sidebar-folder sidebar-folder-sub sidebar-folder-muted"><span class="sidebar-folder-icon">▸</span><span>2026</span></div>
+                  <div class="sidebar-folder sidebar-folder-sub sidebar-folder-muted"><span class="sidebar-folder-icon">▸</span><span>Selects</span></div>
+                  <div class="sidebar-profile"><span class="profile-avatar">L</span><span>로컬 워크스페이스</span><span class="profile-more">•••</span></div>
+                </aside>
+
+                <div class="app-main">
+                  <div class="app-toolbar" aria-hidden="true">
+                    <div class="app-breadcrumb"><span class="crumb-home">⌂</span><span>/</span><span>내 사진</span><span>/</span><strong>Selects</strong></div>
+                    <div class="app-tool-actions"><span class="tool-search">⌕ <span>이미지 검색</span></span><span>☷</span><span>⋮</span></div>
+                  </div>
+                  <div class="app-heading" aria-hidden="true">
+                    <div><span class="app-heading-kicker">FOLDER COLLECTION</span><h3>2026 / Selects</h3></div>
+                    <span class="app-sort">최근 수정순 <b>⌄</b></span>
+                  </div>
+                  <div class="mock-thumbnails" aria-hidden="true">
+                    <div class="mock-thumbnail thumb-a"><span>morning-light.jpg</span></div>
+                    <div class="mock-thumbnail thumb-b"><span>city-notes.png</span></div>
+                    <div class="mock-thumbnail thumb-c"><span>soft-focus.jpg</span></div>
+                    <div class="mock-thumbnail thumb-d is-active"><span>weekend-01.jpg</span><i>✓</i></div>
+                    <div class="mock-thumbnail thumb-e"><span>studio-object.png</span></div>
+                    <div class="mock-thumbnail thumb-f"><span>walk-03.jpg</span></div>
+                    <div class="mock-thumbnail thumb-g"><span>archive-12.png</span></div>
+                    <div class="mock-thumbnail thumb-h"><span>blue-hour.jpg</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="app-footer" aria-hidden="true">
+                <span><i class="status-dot"></i> 59개 항목</span>
+                <span>준비됨</span>
+                <strong>FastImage <em>v2.0.6</em></strong>
+              </div>
+            </div>
+
+            <div class="floating-chip chip-speed"><span class="chip-icon" aria-hidden="true">↯</span><span><strong>빠른 썸네일</strong><small>필요할 때 즉시 로드</small></span></div>
+            <div class="floating-chip chip-local"><span class="chip-icon" aria-hidden="true">⌂</span><span><strong>100% 로컬</strong><small>이미지는 내 PC에만</small></span></div>
+          </div>
+        </div>
+
+        <a class="hero-scroll" href="#features" aria-label="아래 핵심 기능으로 이동">
+          <span>SCROLL TO EXPLORE</span><i aria-hidden="true">↓</i>
+        </a>
+      </section>
+
+      <section class="trust-strip" aria-label="FastImage 핵심 정보">
+        <div class="container trust-grid">
+          <div class="trust-item"><span class="trust-number">01</span><span><strong>로컬 우선</strong><small>이미지는 외부 서버로 보내지 않음</small></span></div>
+          <div class="trust-item"><span class="trust-number">02</span><span><strong>Windows native</strong><small>Windows 10/11 · x64</small></span></div>
+          <div class="trust-item"><span class="trust-number">03</span><span><strong>안전한 파일 작업</strong><small>휴지통 기반 삭제 · 되돌릴 여지</small></span></div>
+          <div class="trust-item"><span class="trust-number">04</span><span><strong>검증된 릴리즈</strong><small>GitHub Release에서 직접 다운로드</small></span></div>
+        </div>
+      </section>
+
+      <section class="section section-features" id="features" aria-labelledby="features-title">
+        <div class="container">
+          <div class="section-heading section-heading-split" data-reveal>
+            <div>
+              <p class="section-kicker"><span>01</span> 핵심 기능</p>
+              <h2 id="features-title">찾는 시간은 줄이고,<br /><span class="soft-gradient-text">이미지에 더 가까이.</span></h2>
+            </div>
+            <p class="section-intro">복잡한 메뉴 대신, 이미지 작업에 필요한 흐름만 남겼습니다. 가볍게 보고 정확하게 정리하세요.</p>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card feature-card-browse" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">01 / BROWSE</span><span class="feature-icon feature-icon-blue" aria-hidden="true">↗</span></div>
+              <div class="feature-copy"><h3>폴더를 여는 순간,<br />컬렉션이 됩니다.</h3><p>Windows 폴더 트리를 그대로 따라가며 최근 폴더와 변경된 파일을 자연스럽게 이어서 탐색합니다.</p></div>
+              <div class="mini-browser" aria-hidden="true">
+                <div class="mini-browser-sidebar"><span class="mini-line mini-line-active"></span><span class="mini-line"></span><span class="mini-line"></span><span class="mini-line mini-line-short"></span></div>
+                <div class="mini-browser-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </article>
+
+            <article class="feature-card feature-card-search" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">02 / FIND</span><span class="feature-icon feature-icon-mint" aria-hidden="true">⌕</span></div>
+              <div class="feature-copy"><h3>필요한 이미지를<br />바로 찾습니다.</h3><p>파일명 검색, 자연 정렬, 형식·용량·날짜·평점 필터를 한 화면에서.</p></div>
+              <div class="search-demo" aria-hidden="true"><span>summer selects</span><b>⌕</b></div>
+            </article>
+
+            <article class="feature-card feature-card-organize" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">03 / ORGANIZE</span><span class="feature-icon feature-icon-yellow" aria-hidden="true">✣</span></div>
+              <div class="feature-copy"><h3>정리 작업을<br />한 번에, 안전하게.</h3><p>여러 파일을 선택해 복사·이동·삭제하고 충돌 없는 이름 변경을 미리 확인합니다.</p></div>
+              <div class="organize-demo" aria-hidden="true"><span class="organize-check">✓</span><span>12 files selected</span><i></i><i></i><i></i></div>
+            </article>
+
+            <article class="feature-card feature-card-viewer" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">04 / VIEW</span><span class="feature-icon feature-icon-violet" aria-hidden="true">◐</span></div>
+              <div class="feature-copy"><h3>선택한 흐름 그대로,<br />집중해서 봅니다.</h3><p>검색과 필터 결과를 그대로 이어받는 뷰어. 확대·회전·슬라이드쇼까지 매끄럽게.</p></div>
+              <div class="viewer-demo" aria-hidden="true"><div class="viewer-image"></div><span>1 / 59</span><b>＋</b><b>−</b></div>
+            </article>
+
+            <article class="feature-card feature-card-edit" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">05 / EDIT</span><span class="feature-icon feature-icon-coral" aria-hidden="true">◒</span></div>
+              <div class="feature-copy"><h3>가벼운 편집은<br />흐름을 끊지 않게.</h3><p>비파괴 편집, Undo/Redo, 자르기와 밝기·대비·채도 조절을 기본으로 제공합니다.</p></div>
+              <div class="edit-demo" aria-hidden="true"><span></span><span></span><span></span><span></span><b>Adjustments</b></div>
+            </article>
+
+            <article class="feature-card feature-card-cache" data-reveal>
+              <div class="feature-card-top"><span class="feature-index">06 / FLOW</span><span class="feature-icon feature-icon-sky" aria-hidden="true">⌁</span></div>
+              <div class="feature-copy"><h3>다시 열어도,<br /><span class="card-gradient-text">기억하는 속도.</span></h3><p>썸네일 캐시와 지연 로딩으로 큰 폴더도 필요한 순간부터 빠르게 표시합니다.</p></div>
+              <div class="cache-demo" aria-hidden="true"><span class="cache-ring"><i></i></span><span>thumbnail cache<br /><b>ready</b></span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section experience-section" id="experience" aria-labelledby="experience-title">
+        <div class="container experience-panel" data-reveal>
+          <div class="experience-copy">
+            <p class="section-kicker section-kicker-light"><span>02</span> 로컬 우선 설계</p>
+            <h2 id="experience-title">외부 서버 없이,<br /><span>내 이미지 그대로.</span></h2>
+            <p class="experience-lede">FastImage는 이미지 파일을 외부 서버에 업로드하지 않습니다. 내 PC의 폴더에서 시작해, 내가 선택한 위치에 안전하게 저장합니다.</p>
+            <ul class="check-list">
+              <li><span>✓</span> 이미지 데이터 업로드 없음</li>
+              <li><span>✓</span> JPG · PNG · GIF · WebP · SVG · TIFF · AVIF</li>
+              <li><span>✓</span> 설치형과 포터블, 두 가지 실행 방식</li>
+            </ul>
+          </div>
+
+          <div class="workflow-card" aria-label="FastImage 작업 흐름">
+            <div class="workflow-card-header"><span>THE FASTIMAGE FLOW</span><span class="workflow-live"><i></i> LOCAL</span></div>
+            <div class="workflow-steps">
+              <div class="workflow-step workflow-step-active"><span class="workflow-step-number">01</span><div><strong>폴더 선택</strong><small>내 사진 폴더를 연결합니다</small></div><span class="workflow-arrow">↗</span></div>
+              <div class="workflow-connector" aria-hidden="true"></div>
+              <div class="workflow-step"><span class="workflow-step-number">02</span><div><strong>빠른 썸네일</strong><small>필요한 이미지부터 보입니다</small></div><span class="workflow-arrow">↗</span></div>
+              <div class="workflow-connector" aria-hidden="true"></div>
+              <div class="workflow-step"><span class="workflow-step-number">03</span><div><strong>안전한 작업</strong><small>선택하고 정리하고 저장합니다</small></div><span class="workflow-arrow">✓</span></div>
+            </div>
+            <div class="format-ribbon"><span>SUPPORTED FORMATS</span><div><b>JPG</b><b>PNG</b><b>GIF</b><b>WEBP</b><b>SVG</b><b>+3</b></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-releases" id="releases" aria-labelledby="releases-title">
+        <div class="container">
+          <div class="section-heading section-heading-split release-heading" data-reveal>
+            <div>
+              <p class="section-kicker"><span>03</span> 다운로드 센터</p>
+              <h2 id="releases-title">필요한 버전을<br /><span class="soft-gradient-text">골라 받으세요.</span></h2>
+            </div>
+            <div class="release-heading-aside"><p>현재 안정판부터 이전 버전까지, 공개된 릴리즈를 한눈에 확인할 수 있습니다.</p><a href="mailto:cybereunny@gmail.com">cybereunny@gmail.com <span aria-hidden="true">↗</span></a></div>
+          </div>
+
+          <div class="release-toolbar" data-reveal>
+            <div class="release-filters" role="group" aria-label="릴리즈 필터">
+              <button class="filter-button is-active" type="button" data-filter-button="all" aria-pressed="true">전체 <span>7</span></button>
+              <button class="filter-button" type="button" data-filter-button="current" aria-pressed="false">현재 버전</button>
+              <button class="filter-button" type="button" data-filter-button="portable" aria-pressed="false">포터블</button>
+              <button class="filter-button" type="button" data-filter-button="setup" aria-pressed="false">설치형</button>
+            </div>
+            <p class="release-filter-status" data-filter-status aria-live="polite">7개의 공개 릴리즈</p>
+          </div>
+
+          <div class="release-list">
+            <article class="release-card release-card-current" data-release-card data-release-types="current setup portable" data-reveal aria-labelledby="release-v206">
+              <div class="release-card-top">
+                <div class="release-card-version"><span class="release-version" id="release-v206">v2.0.6</span><span class="release-badge">CURRENT · 추천</span></div>
+                <time datetime="2026-08-30">2026.08.30 · 최신 안정판</time>
+              </div>
+              <div class="release-card-main">
+                <div class="release-copy"><p class="release-kicker">READY FOR YOUR WORKFLOW</p><h3>설치형과 포터블,<br />원하는 방식으로.</h3><p>처음이라면 Setup, 가볍게 시작하려면 Portable. FastImage 2.0.6의 두 가지 Windows 패키지를 제공합니다.</p><ul class="release-highlights"><li>설치 후 바탕화면·시작 메뉴 바로가기</li><li>GitHub Release 기반 자동 업데이트 지원</li><li>SHA-256 검증으로 다운로드 상태 확인</li></ul></div>
+                <div class="release-packages">
+                  <a class="package-link package-link-primary" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.6/FastImage-2.0.6-Windows-Setup.exe" target="_blank" rel="noopener noreferrer" download><span class="package-icon" aria-hidden="true">⌄</span><span><strong>Windows Setup</strong><small>설치형 · 바탕화면 바로가기</small></span><b aria-hidden="true">↓</b></a>
+                  <a class="package-link" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.6/FastImage-2.0.6-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download><span class="package-icon package-icon-outline" aria-hidden="true">◈</span><span><strong>Windows Portable</strong><small>포터블 · 설치 없이 실행</small></span><b aria-hidden="true">↓</b></a>
+                </div>
+              </div>
+              <div class="release-card-bottom"><span><i class="release-status-dot"></i> Windows x64 · 안정판</span><a href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.6" target="_blank" rel="noopener noreferrer">릴리즈 노트 <span aria-hidden="true">↗</span></a></div>
+            </article>
+
+            <div class="release-archive-grid">
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v205"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v205">v2.0.5</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>더 가벼운 썸네일 흐름</h3><p>키보드 안내를 설정으로 이동하고, 썸네일 원본 로딩과 캐시 흐름을 개선했습니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.5/FastImage-2.0.5-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.5" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v204"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v204">v2.0.4</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>업데이트가 더 분명하게</h3><p>다운로드 진행 용량과 설치 상태를 보여주고, 업데이트 후 자동 재시작 흐름을 다듬었습니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.4/FastImage-2.0.4-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.4" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v203"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v203">v2.0.3</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>앱 전체의 일체감</h3><p>왼쪽 탐색창과 어울리는 통합 하단 푸터, 우측 고정 버전 표시를 추가했습니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.3/FastImage-2.0.3-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.3" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v202"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v202">v2.0.2</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>버전과 선택의 가시성</h3><p>하단 이미지 탭 UI와 초기 버전 표시를 추가해 현재 작업 상태를 더 쉽게 확인합니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.2/FastImage-2.0.2-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.2" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v201"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v201">v2.0.1</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>안전한 업데이트의 시작</h3><p>GitHub Release 확인, SHA-256 검증, 포터블 실행파일 자동 교체를 도입했습니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.1/FastImage-2.0.1-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.1" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+              <article class="release-card release-card-archive" data-release-card data-release-types="archived portable" data-reveal aria-labelledby="release-v200"><div class="release-card-top"><div class="release-card-version"><span class="release-version" id="release-v200">v2.0.0</span><span class="release-badge release-badge-muted">PORTABLE</span></div><time datetime="2026-08-30">2026.08.30</time></div><h3>FastImage 2.0의 출발</h3><p>로컬 이미지 컬렉션, 안전한 파일 작업, 썸네일 캐시, 뷰어와 기본 편집을 하나로 모았습니다.</p><div class="archive-actions"><a class="archive-download" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.0/FastImage-2.0.0-Windows-Portable.exe" target="_blank" rel="noopener noreferrer" download>Portable 다운로드 <span aria-hidden="true">↓</span></a><a class="archive-notes" href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0" target="_blank" rel="noopener noreferrer">Notes <span aria-hidden="true">↗</span></a></div></article>
+            </div>
+            <p class="release-empty" data-release-empty hidden>선택한 조건의 릴리즈가 없습니다. <button type="button" data-reset-filter>전체 릴리즈 보기</button></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-faq" id="faq" aria-labelledby="faq-title">
+        <div class="container faq-layout">
+          <div class="faq-intro" data-reveal><p class="section-kicker"><span>04</span> 궁금한 점</p><h2 id="faq-title">시작하기 전에,<br /><span class="soft-gradient-text">이것만 확인하세요.</span></h2><p>처음 사용하는 분도, 이전 버전을 찾는 분도 필요한 답을 빠르게 찾을 수 있도록 정리했습니다.</p><a class="text-link" href="mailto:cybereunny@gmail.com">cybereunny@gmail.com <span aria-hidden="true">↗</span></a></div>
+          <div class="faq-list" data-reveal>
+            <details open><summary><span class="faq-number">01</span><span>이미지는 외부 서버로 전송되나요?</span><span class="faq-plus" aria-hidden="true"></span></summary><p>아니요. FastImage는 로컬 폴더의 이미지를 내 PC에서 처리합니다. 이미지 파일을 외부 서버에 업로드하지 않으며, 별도 계정도 필요하지 않습니다.</p></details>
+            <details><summary><span class="faq-number">02</span><span>Setup과 Portable은 어떻게 다른가요?</span><span class="faq-plus" aria-hidden="true"></span></summary><p>Setup은 Windows에 설치해 시작 메뉴와 바탕화면 바로가기를 만드는 방식입니다. Portable은 설치 과정 없이 EXE를 원하는 폴더에서 바로 실행하는 방식입니다.</p></details>
+            <details><summary><span class="faq-number">03</span><span>앱은 자동으로 업데이트되나요?</span><span class="faq-plus" aria-hidden="true"></span></summary><p>공개 GitHub Release를 기준으로 새 버전을 확인하고, 사용 중인 배포 방식에 맞는 업데이트 파일을 안내합니다. 업데이트가 필요한 경우 확인창에서 진행할 수 있습니다.</p></details>
+            <details><summary><span class="faq-number">04</span><span>어떤 이미지 형식을 지원하나요?</span><span class="faq-plus" aria-hidden="true"></span></summary><p>JPG/JPEG, PNG, GIF, BMP, WebP, SVG, ICO, TIFF, AVIF를 지원합니다. 일부 애니메이션 이미지는 편집·변환 시 첫 프레임 기준으로 처리될 수 있습니다.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section cta-section" aria-labelledby="cta-title">
+        <div class="container cta-panel" data-reveal>
+          <div class="cta-orb cta-orb-left" aria-hidden="true"></div><div class="cta-orb cta-orb-right" aria-hidden="true"></div>
+          <p class="section-kicker section-kicker-light"><span>READY?</span> 다음 폴더부터</p>
+          <h2 id="cta-title">이미지 폴더가<br /><span>기다리고 있어요.</span></h2>
+          <p>FastImage 2.0.6을 Windows에서 바로 시작해보세요.</p>
+          <div class="cta-actions"><a class="button button-light" href="https://github.com/cybereun/FastImageViewer/releases/download/v2.0.6/FastImage-2.0.6-Windows-Setup.exe" target="_blank" rel="noopener noreferrer" download><span class="button-icon" aria-hidden="true">↓</span><span><strong>Windows 설치파일 받기</strong><small>v2.0.6 · Setup</small></span></a><a class="cta-text-link" href="#releases">모든 릴리즈 보기 <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-main">
+        <div class="footer-brand-block"><a class="brand" href="#top" aria-label="FastImage 처음으로"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8.5A4.5 4.5 0 0 1 8.5 4H15l3.1 3.2H23.5A4.5 4.5 0 0 1 28 11.7v11.8a4.5 4.5 0 0 1-4.5 4.5h-15A4.5 4.5 0 0 1 4 23.5V8.5Z" fill="url(#footer-brand-gradient)" /><path d="m9 22 4.3-5.2 3.2 3.7 2.6-3.1L23 22H9Z" fill="white" fill-opacity=".92" /><circle cx="21.2" cy="11.7" r="2.1" fill="white" fill-opacity=".92" /><defs><linearGradient id="footer-brand-gradient" x1="5" y1="5" x2="27" y2="27" gradientUnits="userSpaceOnUse"><stop stop-color="#1D65F4" /><stop offset="1" stop-color="#7E5BEF" /></linearGradient></defs></svg></span><span class="brand-name">FastImage</span></a><p>로컬 이미지 작업을<br />더 빠르고 가볍게.</p></div>
+        <div class="footer-copy"><span class="footer-label">BUILT WITH CARE</span><p>FastImage는 폴더를 열고 이미지를 정리하는<br class="desktop-only" /> 작은 순간들을 더 편하게 만듭니다.</p><span class="footer-developer">개발자 <strong>Lebi_Cybereun</strong></span></div>
+        <div class="footer-links"><span class="footer-label">EXPLORE</span><a href="#features">기능 살펴보기 <span aria-hidden="true">↗</span></a><a href="#releases">릴리즈 다운로드 <span aria-hidden="true">↗</span></a><a href="mailto:cybereunny@gmail.com">cybereunny@gmail.com <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="container footer-bottom"><span>© 2026 Lebi_Cybereun · FastImage · MIT License</span><span class="footer-privacy"><i aria-hidden="true">●</i> 이미지 데이터는 외부 서버로 업로드되지 않습니다.</span><a href="https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.6" target="_blank" rel="noopener noreferrer">현재 버전 v2.0.6 <span aria-hidden="true">↗</span></a></div>
+    </footer>
+
+    <noscript><div class="noscript-note">이 페이지의 기본 콘텐츠와 다운로드 링크는 JavaScript 없이도 사용할 수 있습니다.</div></noscript>
+  </body>
+</html>

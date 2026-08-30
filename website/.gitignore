@@ -1,0 +1,10 @@
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+node_modules/
+.cache/
+.vite/
+dist/
+preview/
+.agents/

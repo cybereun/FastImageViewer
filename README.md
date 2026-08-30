@@ -1,8 +1,28 @@
 # FastImage 2.0
 
+[![Latest Release](https://img.shields.io/github/v/release/cybereun/FastImageViewer?display_name=tag&sort=semver&style=flat-square)](https://github.com/cybereun/FastImageViewer/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/cybereun/FastImageViewer/release.yml?branch=main&label=build&style=flat-square)](https://github.com/cybereun/FastImageViewer/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2563EB.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0ea5e9.svg)](https://github.com/cybereun/FastImageViewer)
+
+[English](README.en.md)
+
+![FastImage 실행 화면](docs/fastimage-preview.png)
+
+_FastImage v2.0.5 실제 실행 화면_
+
 Windows용 로컬 우선 이미지 브라우저·정리 도구입니다. 폴더를 빠르게 스캔하고, 썸네일/뷰어/기본 편집/파일 정리를 한 앱에서 처리합니다.
 
-개발자: **은준욱**
+개발자: **Lebi_Cybereun**<br />
+저작권: **© 2026 Lebi_Cybereun**<br />
+라이선스: [MIT License](LICENSE)<br />
+문의: [cybereunny@gmail.com](mailto:cybereunny@gmail.com)
+
+## FastImage 프로모션 사이트
+
+다운로드와 기능 소개를 한 화면에서 제공하는 밝은 홍보 사이트는 [website/](website/)에
+있습니다. `website/README.md`의 로컬 서버 명령으로 미리 볼 수 있으며, 사이트의 개발자
+표기는 사용자가 요청한 브랜드명인 **Lebi_Cybereun**으로 구성했습니다.
 
 ## 주요 기능
 
@@ -113,4 +133,4 @@ git push origin main --tags
 
 ## 라이선스
 
-MIT
+[MIT License](LICENSE)

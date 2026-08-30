@@ -371,7 +371,7 @@ export function App() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="about-title" className="text-lg font-semibold text-white">FastImage {appVersion}</h2>
-                <p className="mt-1 text-sm text-gray-400">개발자: 은준욱</p>
+                <p className="mt-1 text-sm text-gray-400">개발자: Lebi_Cybereun · MIT License</p>
               </div>
               <button onClick={() => setAboutOpen(false)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white" title="Close" aria-label="Close about">
                 <X size={16} />

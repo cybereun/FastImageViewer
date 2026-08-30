@@ -14,7 +14,7 @@
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && cross-env ELECTRON_BUILDER_COMPRESSION_LEVEL=1 electron-builder --publish never"
   },
-  "author": "Antigravity",
+  "author": "Lebi_Cybereun",
   "license": "MIT",
   "dependencies": {
     "clsx": "2.1.1",
@@ -45,7 +45,7 @@
   "build": {
     "appId": "com.antigravity.fastimage",
     "productName": "FastImage",
-    "copyright": "Copyright © 2026 은준욱",
+    "copyright": "Copyright © 2026 Lebi_Cybereun",
     "directories": {
       "output": "dist-electron"
     },
