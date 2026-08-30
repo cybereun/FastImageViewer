@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { FileExplorer } from './components/FileExplorer';
+import { BottomTabBar } from './components/BottomTabBar';
 import { ImageViewer } from './components/ImageViewer';
 import { SettingsModal } from './components/SettingsModal';
 import { Toast } from './components/Toast';
@@ -55,7 +56,7 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState('2.0.1');
+  const [appVersion, setAppVersion] = useState('2.0.2');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress | null>(null);
@@ -138,6 +139,10 @@ export function App() {
     setViewerIndex(index);
     setViewerOpen(true);
   }, []);
+
+  const handleBottomTabSelect = useCallback((index: number) => {
+    handleImageClick(index, images);
+  }, [handleImageClick, images]);
 
   const handleCloseViewer = useCallback(() => setViewerOpen(false), []);
 
@@ -341,6 +346,15 @@ export function App() {
             />
           )}
         </div>
+        <BottomTabBar
+          images={images}
+          activeImageId={viewerOpen ? viewerImages[viewerIndex]?.id ?? null : null}
+          status={loading ? 'scanning' : 'ready'}
+          language={preferences.language}
+          appVersion={appVersion}
+          onSelectImage={handleBottomTabSelect}
+          onVersionClick={() => setAboutOpen(true)}
+        />
       </div>
 
       {viewerOpen && viewerImages.length > 0 && (

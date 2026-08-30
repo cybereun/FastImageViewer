@@ -1,4 +1,4 @@
-# FastImage 2.0/2.0.1 Verification Record
+# FastImage 2.0/2.0.1/2.0.2 Verification Record
 
 검증 기준일: 2026-08-30  
 작업 checkout: `L:\Codex-L\fast-image`
@@ -21,9 +21,9 @@
 
 ## 배포 산출물
 
-- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.1-Windows-Portable.exe`
-- 크기: 75,648,461 bytes
-- SHA-256: `9480D0106B0DDCCF65CDC242D2D5B852EE79797D31FB3454135D44FE675A0DF4`
+- 파일: `L:\Codex-L\fast-image\dist-electron\FastImage-2.0.2-Windows-Portable.exe`
+- 크기: 75,651,449 bytes
+- SHA-256: `D15438F34AC6A5FEAD7A707409C751A8BB4AF2F6290472E0C5C6C90489FD4E39`
 - unpacked 실행본: `L:\Codex-L\fast-image\dist-electron\win-unpacked\FastImage.exe`
 
 ## 자동 업데이트 검증
@@ -51,6 +51,7 @@
 - [ ] 동일 형식 원본 덮어쓰기 확인 대화상자 및 watcher 새로고침
 - [ ] 설정의 한국어/영어, 다크/라이트, 삭제 확인, 휠 동작, 기본 폴더
 - [ ] About의 진단 정보 복사 동작(이미지 데이터 미포함)
+- [ ] 하단 전체 이미지 가로 탭, 활성 이미지 표시, 우측 버전 표시 및 버전 클릭
 - [ ] 새 GitHub Release가 있을 때 시작 후 업데이트 안내창 표시
 - [ ] 업데이트 안내창에서 릴리스 내용·버전·다운로드 진행률 표시
 - [ ] 다운로드 완료 후 SHA-256 검증 및 앱 재시작·포터블 EXE 교체

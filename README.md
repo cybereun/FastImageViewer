@@ -21,6 +21,7 @@ Windows용 로컬 우선 이미지 브라우저·정리 도구입니다. 폴더�
 - 이미지 파일/폴더 인수 실행과 Windows 파일 연결 설정
 - 진단 정보 복사(이미지 데이터 및 업로드 없음)
 - GitHub Release 확인, 업데이트 알림, SHA-256 검증, 포터블 EXE 자동 교체
+- 하단 이미지 가로 탭 스트립, 탭 클릭 뷰어 열기, 우측 고정 버전 표시
 
 ## 기술 구조
 
@@ -61,7 +62,7 @@ npm run electron:build
 
 출력 파일:
 
-- `dist-electron/FastImage-2.0.1-Windows-Portable.exe`
+- `dist-electron/FastImage-2.0.2-Windows-Portable.exe`
 - `dist-electron/win-unpacked/`
 
 ## 자동 업데이트
@@ -91,6 +92,7 @@ git push origin main --tags
 
 - [`v2.0.0`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0) — 로컬 이미지 컬렉션, 안전한 일괄 파일 작업, 썸네일 캐시, 필터/메타데이터, 뷰어·편집기·설정 개선
 - [`v2.0.1`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.1) — GitHub Release 기반 업데이트 확인, 알림, 다운로드·SHA-256 검증, 포터블 EXE 자동 교체
+- `v2.0.2` — 하단 전체 이미지 가로 탭, 현재 이미지 활성 표시, 우측 버전 표시
 - `v1.0.0` — 폴더 탐색, 썸네일 그리드, 이미지 뷰어, 기본 편집기, 파일 작업
 
 ## 알려진 제한
