@@ -35,6 +35,19 @@ jobs:
       - name: Build Windows portable app and installer
         run: npm run electron:build
 
+      - name: Verify packaged files and portable restart / recovery
+        run: |
+          node scripts/verify-package.mjs
+          node scripts/update-e2e.mjs portable
+          node scripts/update-e2e.mjs rollback
+
+      - name: Verify installed app update and restart
+        shell: pwsh
+        run: |
+          node scripts/build-update-test-installer.mjs
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          node scripts/update-e2e.mjs installer "dist-e2e-installer/FastImage-$version-Windows-Setup.exe"
+
       - name: Validate release version
         shell: pwsh
         run: |

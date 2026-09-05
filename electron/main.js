@@ -20,6 +20,9 @@ const { loadPreferences, savePreferences } = require('./preferences');
 const { createUpdateManager } = require('./update-service');
 
 const isDev = !app.isPackaged;
+// Keep an explicitly selected profile across updater relaunches.
+const profileArgument = process.argv.find(value => value.startsWith('--user-data-dir='));
+if (profileArgument) app.setPath('userData', path.resolve(profileArgument.slice('--user-data-dir='.length)));
 const directoryWatchers = new Map();
 let mainWindow = null;
 const singleInstanceLock = app.requestSingleInstanceLock();
@@ -93,6 +96,7 @@ function createWindow() {
 
     win.once('ready-to-show', () => {
         win.show();
+        if (win.rendererReady) void updateManager.confirmLaunch().catch(error => console.warn('Update startup confirmation:', error.message));
         win.webContents.send('window:maximized-changed', win.isMaximized());
         void sendLaunchFiles(win, process.argv.slice(1));
     });
@@ -158,6 +162,13 @@ app.on('before-quit', () => {
     for (const entry of directoryWatchers.values()) entry.watcher.close();
     directoryWatchers.clear();
 });
+
+ipcMain.handle('app:rendererReady', async (event) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return;
+    mainWindow.rendererReady = true;
+    if (mainWindow.isVisible()) await updateManager.confirmLaunch();
+});
+ipcMain.handle('app:getUpdateOutcome', () => updateManager.getUpdateOutcome());
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

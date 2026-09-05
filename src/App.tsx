@@ -56,12 +56,28 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState('2.0.6');
+  const [appVersion, setAppVersion] = useState('');
+  const [updateOutcome, setUpdateOutcome] = useState<Awaited<ReturnType<Window['electron']['getUpdateOutcome']>>>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress | null>(null);
   const [updateAction, setUpdateAction] = useState<'idle' | 'downloading' | 'installing' | 'error'>('idle');
   const [updateError, setUpdateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void window.electron.rendererReady().catch(() => undefined);
+    const poll = async () => {
+      const result = await window.electron.getUpdateOutcome().catch(() => null);
+      if (!active || !result) return;
+      clearInterval(timer);
+      if (localStorage.getItem('fastimage-dismissed-update') !== result.id) setUpdateOutcome(result);
+    };
+    const timer = window.setInterval(() => void poll(), 1000);
+    void poll();
+    const deadline = window.setTimeout(() => clearInterval(timer), 300_000);
+    return () => { active = false; clearInterval(timer); clearTimeout(deadline); };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -228,6 +244,21 @@ export function App() {
 
   return (
     <div className={cn('fast-image-app flex h-screen w-screen flex-col overflow-hidden text-white', preferences.theme === 'light' ? 'theme-light' : 'theme-dark')} data-theme={preferences.theme}>
+      {updateOutcome && (
+        <div role="status" className={cn('flex shrink-0 items-center justify-between gap-3 px-4 py-3 text-sm', updateOutcome.phase === 'completed' ? 'bg-emerald-950 text-emerald-100' : 'bg-amber-950 text-amber-100')}>
+          <span>
+            {updateOutcome.phase === 'completed'
+              ? (preferences.language === 'ko' ? `버전 ${updateOutcome.version} 업데이트와 재실행이 완료되었습니다.` : `Updated to ${updateOutcome.version} and restarted successfully.`)
+              : updateOutcome.phase === 'rolled-back'
+                ? (preferences.language === 'ko' ? '업데이트 실행에 실패하여 이전 버전으로 복구했습니다. 앱을 계속 사용할 수 있습니다.' : 'The update could not start. The previous version has been restored.')
+                : (preferences.language === 'ko' ? '이전 업데이트를 완료하지 못했습니다. 업데이트를 다시 시도해주세요.' : 'The previous update did not complete. Please try again.')}
+          </span>
+          <button className="shrink-0 rounded px-2 py-1 hover:bg-white/10" onClick={() => {
+            localStorage.setItem('fastimage-dismissed-update', updateOutcome.id);
+            setUpdateOutcome(null);
+          }} aria-label={preferences.language === 'ko' ? '닫기' : 'Dismiss'}><X size={16} /></button>
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div
           className={cn(

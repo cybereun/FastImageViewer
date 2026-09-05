@@ -152,6 +152,8 @@ declare global {
       loadPreferences: () => Promise<Preferences>;
       savePreferences: (preferences: Preferences) => Promise<void>;
       getAppVersion: () => Promise<string>;
+      rendererReady: () => Promise<void>;
+      getUpdateOutcome: () => Promise<{ id: string; phase: 'completed' | 'rolled-back' | 'failed'; message: string; version: string } | null>;
       checkForUpdates: () => Promise<UpdateCheckResult>;
       downloadUpdate: () => Promise<UpdateDownloadResult>;
       installUpdate: () => Promise<UpdateInstallResult>;

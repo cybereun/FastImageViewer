@@ -1,6 +1,7 @@
 ﻿node_modules/
 dist/
 dist-electron/
+dist-e2e-installer/
 *.log
 .DS_Store
 Thumbs.db
