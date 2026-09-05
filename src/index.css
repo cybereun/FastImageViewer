@@ -189,3 +189,42 @@ body {
 .fast-image-app[data-theme="light"] input[type="range"]::-moz-range-thumb {
   background: #0f766e;
 }
+
+/* Dialogs contain several legacy text-white utility classes.  Give every
+ * light-theme popup a readable dark foreground, including controls whose
+ * text color is set explicitly by a child utility class. */
+.fast-image-app[data-theme="light"] [role="dialog"] {
+  color: #0f172a !important;
+}
+
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-white"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-gray-200"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-gray-300"] {
+  color: #0f172a !important;
+}
+
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-gray-400"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-gray-500"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="text-gray-600"] {
+  color: #475569 !important;
+}
+
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-gray-800"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-gray-700"] {
+  background-color: #f1f5f9 !important;
+}
+
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-gray-900"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-[#0e0e0e]"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-[#101010]"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-[#171717]"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-[#1a1a1a]"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-[#1f1f1f]"] {
+  background-color: #ffffff !important;
+}
+
+/* Preserve white labels on the teal primary action and dark viewer controls. */
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-blue-"][class*="text-white"],
+.fast-image-app[data-theme="light"] [role="dialog"] [class*="bg-red-"][class*="text-white"] {
+  color: #ffffff !important;
+}
