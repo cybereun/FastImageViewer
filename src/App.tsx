@@ -19,6 +19,7 @@ import { Toast } from './components/Toast';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { UpdateDialog } from './components/UpdateDialog';
 import { useImageStore } from './hooks/useImageStore';
+import { BUILD_EDITION, getEditionLabel } from './application/edition';
 import type { ImageFile, UpdateCheckResult, UpdateDownloadProgress, UpdateInfo } from './types';
 import { cn } from './utils/cn';
 import { t } from './i18n';
@@ -402,7 +403,11 @@ export function App() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="about-title" className="text-lg font-semibold text-white">FastImage {appVersion}</h2>
-                <p className="mt-1 text-sm text-gray-400">개발자: Lebi_Cybereun</p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {preferences.language === 'ko' ? '개발자: Lebi_Cybereun' : 'Developer: Lebi_Cybereun'}
+                  {' · '}
+                  {preferences.language === 'ko' ? '에디션' : 'Edition'}: {getEditionLabel(BUILD_EDITION)}
+                </p>
               </div>
               <button onClick={() => setAboutOpen(false)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white" title="Close" aria-label="Close about">
                 <X size={16} />

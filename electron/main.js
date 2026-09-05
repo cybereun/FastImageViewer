@@ -18,16 +18,20 @@ const {
 } = require('./file-system');
 const { loadPreferences, savePreferences } = require('./preferences');
 const { createUpdateManager } = require('./update-service');
+const { detectEdition } = require('./edition');
 
 const isDev = !app.isPackaged;
+const appEdition = detectEdition(app);
 // Keep an explicitly selected profile across updater relaunches.
 const profileArgument = process.argv.find(value => value.startsWith('--user-data-dir='));
 if (profileArgument) app.setPath('userData', path.resolve(profileArgument.slice('--user-data-dir='.length)));
+else if (appEdition === 'pro') app.setPath('userData', path.join(app.getPath('appData'), 'FastImage Pro'));
 const directoryWatchers = new Map();
 let mainWindow = null;
 const singleInstanceLock = app.requestSingleInstanceLock();
 const updateManager = createUpdateManager({
     app,
+    edition: appEdition,
     onUpdateAvailable: (update) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('app:update-available', update);
@@ -274,6 +278,7 @@ ipcMain.handle('fs:stopWatchingDirectory', async (event, watchId) => {
 ipcMain.handle('preferences:load', async () => loadPreferences(app.getPath('userData')));
 ipcMain.handle('preferences:save', async (_event, preferences) => savePreferences(app.getPath('userData'), preferences));
 ipcMain.handle('app:getVersion', () => app.getVersion());
+ipcMain.handle('app:getEdition', () => appEdition);
 ipcMain.handle('app:checkForUpdates', () => updateManager.checkForUpdates());
 ipcMain.handle('app:downloadUpdate', () => updateManager.downloadUpdate());
 ipcMain.handle('app:installUpdate', () => updateManager.installUpdate());

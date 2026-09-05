@@ -1,7 +1,7 @@
 {
   "name": "fast-image-viewer",
   "private": true,
-  "version": "2.0.13",
+  "version": "2.1.0",
   "description": "Fast local-first desktop image browser and organizer",
   "main": "electron/main.js",
   "scripts": {
@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && cross-env ELECTRON_BUILDER_COMPRESSION_LEVEL=1 electron-builder --publish never"
+    "electron:build": "node scripts/build-edition.mjs community",
+    "electron:build:community": "node scripts/build-edition.mjs community",
+    "electron:build:pro": "node scripts/build-edition.mjs pro"
   },
   "author": "Lebi_Cybereun",
   "license": "MIT",
