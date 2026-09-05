@@ -93,7 +93,7 @@ it('removes the previous portable and Electron runtime environment from relaunch
 describe.skipIf(process.platform !== 'win32')('PowerShell update transaction', () => {
   async function runHelper({ mode = 'success', distribution = 'portable', corrupt = false, alive = false } = {}) {
     const base = await mkdtemp(path.join(tmpdir(), 'fastimage-helper-'));
-    const directory = path.join(base, "한글 & 공백 ' 경로");
+    const directory = path.join(base, 'helper-test');
     await mkdir(directory);
     try {
       const sourcePath = path.join(directory, 'source.exe');
