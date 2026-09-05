@@ -48,6 +48,10 @@ if (mode === 'installer') {
   source = path.join(profile, 'updates', 'setup.exe');
   await fs.copyFile(path.resolve(process.argv[3]), source);
   target = path.join(root, 'installed', 'FastImageUpdateTest.exe');
+  // Windows Defender and the hosted runner can keep a freshly generated NSIS
+  // payload open briefly after the copy.  Let that scan settle before starting
+  // the bootstrapper so the smoke test measures installation, not file timing.
+  await sleep(10_000);
   await run(source, ['/S', `/D=${path.dirname(target)}`]);
 } else {
   const targetDirectory = path.join(root, "한글 & 공백 ' 사진 앱");
