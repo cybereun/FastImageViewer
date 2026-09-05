@@ -31,8 +31,9 @@ async function waitFor(fn, description, timeout = 120_000) {
 }
 function closeWindow(pid) {
   if (!Number.isInteger(pid) || pid <= 0) throw new Error('Invalid test process ID');
-  const result = spawnSync(ps, ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).CloseMainWindow()`], { env, windowsHide: true, encoding: 'utf8' });
-  if (result.status !== 0) throw new Error(result.stderr);
+  const result = spawnSync(ps, ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid} -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() })`], { env, windowsHide: true, encoding: 'utf8' });
+  if (result.error) throw result.error;
+  if (result.status !== 0 && result.stderr.trim()) throw new Error(result.stderr);
 }
 async function run(exe, args) {
   const child = spawn(exe, args, { env, windowsHide: true, stdio: 'ignore', cwd: root });
