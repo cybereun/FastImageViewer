@@ -139,7 +139,8 @@ function Start-Process {
 & "$PSScriptRoot\helper.ps1" "$PSScriptRoot\job.json"
 `.replace('MODE', mode).replace('MODE', mode).replace('TEST_PID', String(process.pid));
       await writeFile(path.join(directory, 'wrapper.ps1'), '\uFEFF' + wrapper);
-      const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(directory, 'wrapper.ps1')],
+      const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
+      const result = spawnSync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(directory, 'wrapper.ps1')],
         { cwd: base, encoding: 'utf8', timeout: 15000, windowsHide: true, env: cleanUpdateEnvironment() });
       expect(result.error).toBeUndefined();
       expect(result.status, result.stderr).toBe(0);
