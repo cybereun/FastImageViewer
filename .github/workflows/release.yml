@@ -29,7 +29,9 @@ jobs:
       - name: Verify source
         run: |
           npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
 
       - name: Build Windows portable app and installer
@@ -38,14 +40,18 @@ jobs:
       - name: Verify packaged files and portable restart / recovery
         run: |
           node scripts/verify-package.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/update-manager-e2e.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/update-e2e.mjs portable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/update-e2e.mjs rollback
 
       - name: Verify installed app update and restart
         shell: pwsh
         run: |
           node scripts/build-update-test-installer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           node scripts/update-e2e.mjs installer "dist-e2e-installer/FastImage-$version-Windows-Setup.exe"
 
