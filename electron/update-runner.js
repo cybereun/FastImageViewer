@@ -55,16 +55,21 @@ function createUpdateRunner({ app, executablePath, spawnProcess = spawn }) {
         await fs.promises.writeFile(scriptPath, '\uFEFF' + await fs.promises.readFile(path.join(__dirname, 'update-helper.ps1'), 'utf8'), 'utf8');
         await writeJson(jobPath, job);
         await writeJson(transactionPath, { id });
-        const log = fs.openSync(path.join(jobDirectory, 'helper.log'), 'a');
-        let child;
-        try {
-            child = spawnProcess(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'), [
-                '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, jobPath,
-            ], { detached: true, windowsHide: true, cwd: directory, env: cleanUpdateEnvironment(), stdio: ['ignore', log, log] });
-        } finally { fs.closeSync(log); }
+        const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
+        const quote = value => `'${value.replaceAll("'", "''")}'`;
+        const command = `& ${quote(scriptPath)} ${quote(jobPath)} *> ${quote(path.join(jobDirectory, 'startup.log'))}`;
+        const encoded = Buffer.from(command, 'utf16le').toString('base64');
+        // A detached PowerShell has no console and may silently do nothing. A non-detached
+        // child can be terminated with Electron's child-process job. CMD START creates a
+        // separate hidden PowerShell console/process that survives the app's exit.
+        // Only base64 carries user paths through CMD; %, &, quotes and Korean remain literal.
+        const child = spawnProcess(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/cmd.exe'), [
+            '/d', '/s', '/c', `"start "" "${powershell}" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand ${encoded}"`,
+        ], { detached: true, windowsVerbatimArguments: true, windowsHide: true,
+            cwd: directory, env: cleanUpdateEnvironment(), stdio: 'ignore' });
         let startupError;
         child.on('error', error => { startupError = error; });
-        child.on('exit', code => { startupError = new Error(`Update helper stopped before startup (exit ${code}).`); });
+        child.on('exit', code => { if (code !== 0) startupError = new Error(`Update launcher failed (exit ${code}).`); });
         child.unref();
         const deadline = Date.now() + 30_000;
         try {

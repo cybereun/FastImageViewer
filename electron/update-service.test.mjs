@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { mkdir, mkdtemp, rm, writeFile, readFile, copyFile } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+import { once } from 'node:events';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
@@ -58,6 +59,35 @@ describe.skipIf(process.platform !== 'win32')('update lifecycle', () => {
     const runner = createUpdateRunner({ app, executablePath: () => process.execPath });
     await expect(runner.confirmLaunch()).resolves.toBeUndefined();
   }));
+  it('starts the real PowerShell helper and receives its ready signal before committing', () => setup(async (app, manifest, directory) => {
+    const target = path.join(directory, 'current.exe');
+    await writeFile(target, 'old exe');
+    let helper;
+    let helperPid;
+    const runner = createUpdateRunner({ app, executablePath: () => target, spawnProcess: (...args) => {
+      helper = spawn(...args);
+      return helper;
+    } });
+    try {
+      await runner.start(manifest, target, 'portable');
+      const { id } = await readJson(path.join(directory, 'updates/transaction.json'));
+      helperPid = (await readJson(path.join(directory, 'updates', id, 'status.json'))).helperPid;
+      expect(await readFile(path.join(directory, 'updates', id, 'ready'), 'utf8')).toContain(id);
+      expect(await readFile(path.join(directory, 'updates', id, 'commit'), 'utf8')).toBe(id);
+      expect(await readFile(target, 'utf8')).toBe('old exe');
+    } finally {
+      if (helperPid) {
+        try { process.kill(helperPid); } catch { }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      if (helper && helper.exitCode === null) {
+        helper.ref();
+        const exited = once(helper, 'exit');
+        helper.kill();
+        await exited;
+      }
+    }
+  }), 35000);
 });
 
 it('removes the previous portable and Electron runtime environment from relaunches', () => {

@@ -38,6 +38,7 @@ jobs:
       - name: Verify packaged files and portable restart / recovery
         run: |
           node scripts/verify-package.mjs
+          node scripts/update-manager-e2e.mjs
           node scripts/update-e2e.mjs portable
           node scripts/update-e2e.mjs rollback
 
