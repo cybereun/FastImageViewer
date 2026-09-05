@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import { mkdir, mkdtemp, rm, writeFile, readFile, copyFile } from 'node:fs/promises';
-import { spawnSync, spawn } from 'node:child_process';
-import { once } from 'node:events';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
@@ -14,12 +13,12 @@ describe.skipIf(process.platform !== 'win32')('update lifecycle', () => {
     try {
       const updates = path.join(directory, 'updates');
       await mkdir(updates);
-      const stagedPath = path.join(updates, 'FastImage-2.0.9-Windows-Setup.exe');
+      const stagedPath = path.join(updates, 'FastImage-2.0.10-Windows-Setup.exe');
       await writeFile(stagedPath, 'update');
-      const manifest = { version: '2.0.9', assetName: path.basename(stagedPath), stagedPath,
+      const manifest = { version: '2.0.10', assetName: path.basename(stagedPath), stagedPath,
         sha256: crypto.createHash('sha256').update('update').digest('hex') };
       await writeFile(path.join(updates, 'pending-update.json'), JSON.stringify(manifest));
-      const app = { isPackaged: true, getVersion: () => '2.0.8', getPath: () => directory, quit: vi.fn() };
+      const app = { isPackaged: true, getVersion: () => '2.0.9', getPath: () => directory, quit: vi.fn() };
       await run(app, manifest, directory);
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
@@ -59,34 +58,29 @@ describe.skipIf(process.platform !== 'win32')('update lifecycle', () => {
     const runner = createUpdateRunner({ app, executablePath: () => process.execPath });
     await expect(runner.confirmLaunch()).resolves.toBeUndefined();
   }));
-  it('starts the real PowerShell helper and receives its ready signal before committing', () => setup(async (app, manifest, directory) => {
+  it('launches the helper through an isolated Windows broker and commits after ready', () => setup(async (app, manifest, directory) => {
     const target = path.join(directory, 'current.exe');
     await writeFile(target, 'old exe');
-    let helper;
-    let helperPid;
+    let launch;
     const runner = createUpdateRunner({ app, executablePath: () => target, spawnProcess: (...args) => {
-      helper = spawn(...args);
-      return helper;
+      launch = args;
+      const child = { on() { return child; }, unref: vi.fn(), kill: vi.fn() };
+      void (async () => {
+        const { id } = await readJson(path.join(directory, 'updates/transaction.json'));
+        await writeFile(path.join(directory, 'updates', id, 'ready'), id);
+      })();
+      return child;
     } });
-    try {
-      await runner.start(manifest, target, 'portable');
-      const { id } = await readJson(path.join(directory, 'updates/transaction.json'));
-      helperPid = (await readJson(path.join(directory, 'updates', id, 'status.json'))).helperPid;
-      expect(await readFile(path.join(directory, 'updates', id, 'ready'), 'utf8')).toContain(id);
-      expect(await readFile(path.join(directory, 'updates', id, 'commit'), 'utf8')).toBe(id);
-      expect(await readFile(target, 'utf8')).toBe('old exe');
-    } finally {
-      if (helperPid) {
-        try { process.kill(helperPid); } catch { }
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-      if (helper && helper.exitCode === null) {
-        helper.ref();
-        const exited = once(helper, 'exit');
-        helper.kill();
-        await exited;
-      }
-    }
+    await runner.start(manifest, target, 'portable');
+    const { id } = await readJson(path.join(directory, 'updates/transaction.json'));
+    expect(await readFile(path.join(directory, 'updates', id, 'ready'), 'utf8')).toContain(id);
+    expect(await readFile(path.join(directory, 'updates', id, 'commit'), 'utf8')).toBe(id);
+    expect(await readFile(target, 'utf8')).toBe('old exe');
+    expect(launch[0].toLowerCase()).toMatch(/system32[\\/]cmd\.exe$/);
+    expect(launch[1]).toEqual(expect.arrayContaining(['/d', '/s']));
+    expect(launch[1].join(' ')).toContain('EncodedCommand');
+    expect(launch[2]).toMatchObject({ detached: true, windowsVerbatimArguments: true, windowsHide: true, cwd: path.join(directory, 'updates'), stdio: 'ignore' });
+    expect(Object.keys(launch[2].env).some(key => /^PORTABLE_/i.test(key))).toBe(false);
   }), 35000);
 });
 
@@ -107,7 +101,7 @@ describe.skipIf(process.platform !== 'win32')('PowerShell update transaction', (
       await writeFile(sourcePath, 'new');
       await writeFile(targetPath, 'old');
       const job = { id: crypto.randomUUID(), distribution, processId: alive ? process.pid : 2147483647,
-        expectedVersion: '2.0.9', previousVersion: '2.0.8', sourcePath, targetPath, userData: directory,
+        expectedVersion: '2.0.10', previousVersion: '2.0.9', sourcePath, targetPath, userData: directory,
         sha256: crypto.createHash('sha256').update(corrupt ? 'wrong' : 'new').digest('hex'),
         pendingPath: path.join(directory, 'pending.json'), exitTimeoutMs: 400, launchTimeoutMs: 400, showErrors: false };
       await writeFile(job.pendingPath, '{}');
