@@ -24,7 +24,8 @@ The bright, static product site in [FastImage-Web](https://github.com/cybereun/F
 
 ## Features
 
-- Windows folder tree navigation, recent-folder memory, and folder change detection
+- Windows Explorer-style folder tree with system-folder and drive-type icons, recent-folder memory, and folder change detection
+- Volume labels, drive letters, and capacity details for fixed, USB, CD/DVD, and network drives
 - Filename search and natural sorting by name, size, date, or rating
 - JPG/JPEG, PNG, GIF, BMP, WebP, SVG, ICO, TIFF, and AVIF support
 - Lazy-loaded thumbnails with an Electron-native memory cache
