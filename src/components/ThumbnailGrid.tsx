@@ -226,7 +226,7 @@ function ThumbnailItem({
             loading={generatedThumbnail && !thumbnailFailed ? 'eager' : 'lazy'}
             decoding="async"
             className={cn(
-              'h-full w-full object-cover transition-transform duration-200 group-hover:scale-105',
+              'h-full w-full object-contain',
               !loaded && 'opacity-0'
             )}
             onLoad={() => setLoaded(true)}

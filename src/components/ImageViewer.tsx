@@ -617,7 +617,7 @@ export function ImageViewer({
                     idx === currentIndex ? 'scale-110 ring-2 ring-blue-500' : 'opacity-60 hover:opacity-100'
                   )}
                 >
-                  <img src={img.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img src={img.url} alt="" className="h-full w-full object-contain" loading="lazy" />
                 </button>
               );
             })}

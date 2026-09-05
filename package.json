@@ -1,7 +1,7 @@
 {
   "name": "fast-image-viewer",
   "private": true,
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Fast local-first desktop image browser and organizer",
   "main": "electron/main.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "lucide-react": "^0.563.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sharp": "0.34.5",
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
@@ -58,11 +59,15 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "FastImage-${version}-Windows-Portable.${ext}"
@@ -80,7 +85,19 @@
     },
     "fileAssociations": [
       {
-        "ext": ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "tif", "tiff", "avif"],
+        "ext": [
+          "jpg",
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "webp",
+          "svg",
+          "ico",
+          "tif",
+          "tiff",
+          "avif"
+        ],
         "name": "FastImage Image",
         "role": "Editor"
       }

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { nativeImage, shell } = require('electron');
+const { createOrientedThumbnail } = require('./thumbnail');
 
 const SUPPORTED_EXTENSIONS = new Set([
     'jpg',
@@ -283,10 +284,18 @@ async function getThumbnailDataUrl(filePath, requestedSize = 320) {
     const cached = thumbnailCache.get(key);
     if (cached) return cached;
 
-    const image = nativeImage.createFromPath(source);
-    if (image.isEmpty()) throw new Error('Unable to decode image.');
-    const thumbnail = image.resize({ width: size, quality: 'good' });
-    const dataUrl = thumbnail.toDataURL();
+    let dataUrl;
+    if (['.bmp', '.ico'].includes(path.extname(source).toLowerCase())) {
+        // These formats are supported by Electron but not by sharp.
+        const image = nativeImage.createFromPath(source);
+        if (image.isEmpty()) throw new Error('Unable to decode image.');
+        const dimensions = image.getSize();
+        const bounds = dimensions.width >= dimensions.height ? { width: size } : { height: size };
+        dataUrl = image.resize({ ...bounds, quality: 'good' }).toDataURL();
+    } else {
+        // Apply EXIF rotation/mirroring before metadata is removed from the PNG.
+        dataUrl = await createOrientedThumbnail(source, size);
+    }
     thumbnailCache.set(key, dataUrl);
     while (thumbnailCache.size > MAX_THUMBNAIL_CACHE) {
         thumbnailCache.delete(thumbnailCache.keys().next().value);

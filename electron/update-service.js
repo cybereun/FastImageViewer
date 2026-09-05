@@ -21,7 +21,8 @@ const INSTALLER_SCRIPT = String.raw`param(
     [string] $SourcePath,
     [string] $TargetPath,
     [string] $PendingPath,
-    [string] $ScriptPath
+    [string] $ScriptPath,
+    [string] $ReadyPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,6 +30,7 @@ $stagingPath = "$TargetPath.fastimage-new-$ProcessId"
 $backupPath = "$TargetPath.fastimage-backup-$ProcessId"
 
 try {
+    Set-Content -LiteralPath $ReadyPath -Value 'ready' -Encoding UTF8
     for ($attempt = 0; $attempt -lt 240; $attempt += 1) {
         if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) { break }
         Start-Sleep -Milliseconds 250
@@ -43,23 +45,28 @@ try {
         Remove-Item -LiteralPath $backupPath -Force
     }
     if (Test-Path -LiteralPath $TargetPath) {
-        Move-Item -LiteralPath $TargetPath -Destination $backupPath -Force
+        # The portable launcher can still hold the EXE after Electron exits.
+        for ($attempt = 0; ; $attempt += 1) {
+            try {
+                Move-Item -LiteralPath $TargetPath -Destination $backupPath -Force
+                break
+            } catch {
+                if ($attempt -ge 239) { throw }
+                Start-Sleep -Milliseconds 250
+            }
+        }
     }
     Move-Item -LiteralPath $stagingPath -Destination $TargetPath -Force
 
-    if (Test-Path -LiteralPath $SourcePath) {
-        Remove-Item -LiteralPath $SourcePath -Force
-    }
-    if (Test-Path -LiteralPath $PendingPath) {
-        Remove-Item -LiteralPath $PendingPath -Force
-    }
-
     Start-Process -FilePath $TargetPath -WorkingDirectory (Split-Path -Parent $TargetPath)
+    Remove-Item -LiteralPath $SourcePath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PendingPath -Force -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $backupPath) {
         Remove-Item -LiteralPath $backupPath -Force
     }
 }
 catch {
+    $_ | Out-String | Add-Content -LiteralPath "$PendingPath.log" -Encoding UTF8
     if (Test-Path -LiteralPath $stagingPath) {
         Remove-Item -LiteralPath $stagingPath -Force -ErrorAction SilentlyContinue
     }
@@ -68,6 +75,7 @@ catch {
     }
 }
 finally {
+    Remove-Item -LiteralPath $ReadyPath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $ScriptPath -Force -ErrorAction SilentlyContinue
 }
 `;
@@ -76,12 +84,14 @@ const NSIS_INSTALLER_SCRIPT = String.raw`param(
     [int] $ProcessId,
     [string] $SourcePath,
     [string] $PendingPath,
-    [string] $ScriptPath
+    [string] $ScriptPath,
+    [string] $ReadyPath
 )
 
 $ErrorActionPreference = 'Stop'
 
 try {
+    Set-Content -LiteralPath $ReadyPath -Value 'ready' -Encoding UTF8
     for ($attempt = 0; $attempt -lt 240; $attempt += 1) {
         if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) { break }
         Start-Sleep -Milliseconds 250
@@ -91,7 +101,7 @@ try {
         throw 'FastImage did not exit before the update timeout.'
     }
 
-    $installer = Start-Process -FilePath $SourcePath -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden
+    $installer = Start-Process -FilePath $SourcePath -ArgumentList '/S', '--force-run', '--updated' -PassThru -Wait -WindowStyle Hidden
     if ($installer.ExitCode -ne 0) {
         throw "FastImage installer exited with code $($installer.ExitCode)."
     }
@@ -104,9 +114,11 @@ try {
     }
 }
 catch {
+    $_ | Out-String | Add-Content -LiteralPath "$PendingPath.log" -Encoding UTF8
     # Keep the staged installer and manifest so the next launch can retry safely.
 }
 finally {
+    Remove-Item -LiteralPath $ReadyPath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $ScriptPath -Force -ErrorAction SilentlyContinue
 }
 `;
@@ -434,6 +446,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         const updatesDirectory = getUpdatesDirectory();
         await fs.promises.mkdir(updatesDirectory, { recursive: true });
         const scriptPath = path.join(updatesDirectory, `.install-update-${process.pid}-${Date.now()}.ps1`);
+        const readyPath = `${scriptPath}.ready`;
         const installerScript = distribution === 'installer' ? NSIS_INSTALLER_SCRIPT : INSTALLER_SCRIPT;
         await fs.promises.writeFile(scriptPath, installerScript, 'utf8');
         const powershellPath = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
@@ -461,12 +474,30 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
             'Bypass',
             '-File',
             ...scriptArguments,
+            readyPath,
         ], {
             detached: true,
             stdio: 'ignore',
             windowsHide: true,
+            cwd: updatesDirectory,
+        });
+        // Do not exit until PowerShell has actually initialized and read the script.
+        // A successful spawn alone cannot detect policy/startup/script failures.
+        let startupError = null;
+        child.on('error', (error) => { startupError = error; });
+        child.on('exit', (code) => {
+            startupError = new Error(`Update helper exited before it was ready (code ${code}).`);
         });
         child.unref();
+        const deadline = Date.now() + 15_000;
+        while (!fs.existsSync(readyPath)) {
+            if (startupError) throw startupError;
+            if (Date.now() >= deadline) {
+                child.kill();
+                throw new Error('The update helper could not start. The app has been kept open.');
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        }
     }
 
     async function installUpdate() {
@@ -488,6 +519,9 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
             return { status: 'error', message: 'The current portable executable could not be located.' };
         }
         try {
+            await writeJsonAtomically(getPendingManifestPath(), {
+                ...manifest, installAttemptedAt: new Date().toISOString(),
+            });
             await runInstaller(manifest, targetPath, distribution);
             // The installer waits for this process to exit before replacing the portable EXE.
             // Without an explicit quit the UI stays in the installing state forever.
@@ -507,6 +541,8 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
             await clearPendingManifest(manifest);
             return false;
         }
+        // A failed update must not trap the user in an exit/retry loop.
+        if (manifest.installAttemptedAt) return false;
         const validation = await validateStagedUpdate(manifest);
         if (!validation.ok) {
             await clearPendingManifest(manifest);
@@ -516,6 +552,9 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         const targetPath = distribution === 'portable' ? getPortableExecutablePath() : null;
         if (distribution === 'portable' && (!targetPath.toLowerCase().endsWith('.exe') || !fs.existsSync(targetPath))) return false;
         try {
+            await writeJsonAtomically(getPendingManifestPath(), {
+                ...manifest, installAttemptedAt: new Date().toISOString(),
+            });
             await runInstaller(manifest, targetPath, distribution);
             return true;
         } catch {
@@ -532,6 +571,8 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
 }
 
 module.exports = {
+    INSTALLER_SCRIPT,
+    NSIS_INSTALLER_SCRIPT,
     RELEASE_API_URL,
     createUpdateManager,
 };
