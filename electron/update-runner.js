@@ -71,7 +71,10 @@ function createUpdateRunner({ app, executablePath, spawnProcess = spawn }) {
         child.on('error', error => { startupError = error; });
         child.on('exit', code => { if (code !== 0) startupError = new Error(`Update launcher failed (exit ${code}).`); });
         child.unref();
-        const deadline = Date.now() + 30_000;
+        // Hashing and copying a portable build can take well over 30 seconds on
+        // a busy or slower Windows volume.  Keep the app open until the helper
+        // has verified the payload instead of declaring a false startup failure.
+        const deadline = Date.now() + 120_000;
         try {
             while (!fs.existsSync(path.join(jobDirectory, 'ready'))) {
                 if (startupError) throw startupError;
