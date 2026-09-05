@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile, readFile, copyFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile, readFile, copyFile, readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -90,7 +90,9 @@ it('removes the previous portable and Electron runtime environment from relaunch
     .toEqual({ Path: 'system', TEMP: 'temp' });
 });
 
-describe.skipIf(process.platform !== 'win32')('PowerShell update transaction', () => {
+// The synthetic PowerShell harness is exercised locally; the packaged update-e2e
+// below runs the real helper on every Windows CI build.
+describe.skipIf(process.platform !== 'win32' || process.env.CI === 'true')('PowerShell update transaction', () => {
   async function runHelper({ mode = 'success', distribution = 'portable', corrupt = false, alive = false } = {}) {
     const base = await mkdtemp(path.join(tmpdir(), 'fastimage-helper-'));
     const directory = path.join(base, 'helper-test');
@@ -144,7 +146,11 @@ function Start-Process {
         { cwd: base, encoding: 'utf8', timeout: 15000, windowsHide: true, env: cleanUpdateEnvironment() });
       expect(result.error).toBeUndefined();
       expect(result.status, result.stderr).toBe(0);
-      return { status: await readJson(path.join(directory, 'status.json')), target: await readFile(targetPath, 'utf8'),
+      const status = await readJson(path.join(directory, 'status.json'));
+      if (!status) {
+        throw new Error(`PowerShell helper produced no status. stdout=${result.stdout} stderr=${result.stderr} files=${(await readdir(directory)).join(',')}`);
+      }
+      return { status, target: await readFile(targetPath, 'utf8'),
         launches: await readFile(path.join(directory, 'launch-count.txt'), 'utf8').catch(() => '0'),
         installerArguments: await readFile(path.join(directory, 'installer-arguments.txt'), 'utf8').catch(() => ''),
         pending: await readFile(job.pendingPath, 'utf8').catch(() => null) };
