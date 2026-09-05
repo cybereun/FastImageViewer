@@ -272,6 +272,11 @@ async function overwriteImageFile(sourcePath, bytes) {
     return { path: source, name: path.basename(source) };
 }
 
+async function readImageData(sourcePath) {
+    const source = await ensureImageFile(sourcePath);
+    return fs.promises.readFile(source);
+}
+
 async function batchFileOperation(operation, sourcePaths, targetFolderPath) {
     if (!['copy', 'move', 'delete'].includes(operation)) throw new Error('Unsupported file operation.');
     if (!Array.isArray(sourcePaths) || sourcePaths.length === 0) throw new Error('No source files were provided.');
@@ -357,6 +362,7 @@ module.exports = {
     renameImageFile,
     deleteImageFile,
     overwriteImageFile,
+    readImageData,
     batchFileOperation,
     batchRenameImageFiles,
     getThumbnailDataUrl,
