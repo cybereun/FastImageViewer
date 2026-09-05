@@ -75,32 +75,117 @@ body {
 
 .fast-image-app[data-theme="light"] {
   color-scheme: light;
+  color: #1e293b;
+  background: #f8fafc;
 }
 
-.fast-image-app[data-theme="light"] [class~="bg-gray-950"],
-.fast-image-app[data-theme="light"] [class~="bg-gray-900"],
-.fast-image-app[data-theme="light"] [class~="bg-gray-800"],
-.fast-image-app[data-theme="light"] [class~="bg-[#0d0d0d]"],
-.fast-image-app[data-theme="light"] [class~="bg-[#1e1e1e]"],
-.fast-image-app[data-theme="light"] [class~="bg-[#121212]"],
-.fast-image-app[data-theme="light"] [class~="bg-[#252526]"],
-.fast-image-app[data-theme="light"] [class~="bg-[#1a1a1a]"],
-.fast-image-app[data-theme="light"] [class~="bg-[#1f1f1f]"] {
-  background-color: #f8fafc;
+/*
+ * The UI was originally authored with dark-only utility classes.  Keep the
+ * markup shared between themes, but give the light theme its own neutral
+ * surfaces and a calm teal accent.  Attribute selectors also cover Tailwind's
+ * opacity variants (for example bg-gray-900/80) that a class-exact selector
+ * cannot match.
+ */
+.fast-image-app[data-theme="light"] [class*="bg-gray-950"],
+.fast-image-app[data-theme="light"] [class*="bg-[#0d0d0d]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#0e0e0e]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#101010]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#111]"] {
+  background-color: #f8fafc !important;
 }
 
-.fast-image-app[data-theme="light"] [class~="text-white"],
-.fast-image-app[data-theme="light"] [class~="text-gray-200"],
-.fast-image-app[data-theme="light"] [class~="text-gray-300"] {
-  color: #1f2937;
+.fast-image-app[data-theme="light"] [class*="bg-gray-900"],
+.fast-image-app[data-theme="light"] [class*="bg-[#121212]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#171717]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#1a1a1a]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#1e1e1e]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#1f1f1f]"],
+.fast-image-app[data-theme="light"] [class*="bg-[#252526]"] {
+  background-color: #ffffff !important;
 }
 
-.fast-image-app[data-theme="light"] [class~="text-gray-400"],
-.fast-image-app[data-theme="light"] [class~="text-gray-500"] {
-  color: #64748b;
+.fast-image-app[data-theme="light"] [class*="bg-gray-800"],
+.fast-image-app[data-theme="light"] [class*="bg-gray-700"] {
+  background-color: #eef2f7 !important;
 }
 
-.fast-image-app[data-theme="light"] [class~="border-gray-700"],
-.fast-image-app[data-theme="light"] [class~="border-gray-800"] {
-  border-color: #cbd5e1;
+.fast-image-app[data-theme="light"] [class*="hover:bg-gray-800"],
+.fast-image-app[data-theme="light"] [class*="hover:bg-gray-700"],
+.fast-image-app[data-theme="light"] [class*="hover:bg-gray-600"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="text-white"],
+.fast-image-app[data-theme="light"] [class*="text-gray-200"],
+.fast-image-app[data-theme="light"] [class*="text-gray-300"] {
+  color: #1e293b !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="text-gray-400"],
+.fast-image-app[data-theme="light"] [class*="text-gray-500"] {
+  color: #64748b !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="text-gray-600"] {
+  color: #475569 !important;
+}
+
+/* Replace the saturated blue controls with an accessible teal accent. */
+.fast-image-app[data-theme="light"] [class*="bg-blue-600"],
+.fast-image-app[data-theme="light"] [class*="bg-blue-700"] {
+  background-color: #0f766e !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="bg-blue-500"] {
+  background-color: #0d9488 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="bg-blue-950"] {
+  background-color: #ccfbf1 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="bg-blue-500\/15"],
+.fast-image-app[data-theme="light"] [class*="bg-blue-950\/20"],
+.fast-image-app[data-theme="light"] [class*="bg-blue-950\/40"] {
+  background-color: #ccfbf1 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="text-blue-"] {
+  color: #115e59 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="bg-blue-"][class*="text-white"],
+.fast-image-app[data-theme="light"] [class*="bg-red-"][class*="text-white"] {
+  color: #ffffff !important;
+}
+
+/* The image viewer intentionally stays dark so photographs keep a neutral
+ * surround; restore its light-on-dark controls after the app-wide text map. */
+.fast-image-app[data-theme="light"] [class*="bg-black"] [class*="text-white"],
+.fast-image-app[data-theme="light"] [class*="bg-black"] [class*="text-gray-200"],
+.fast-image-app[data-theme="light"] [class*="bg-black"] [class*="text-gray-300"] {
+  color: #ffffff !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="border-blue-"] {
+  border-color: #5eead4 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="ring-blue-"] {
+  --tw-ring-color: #14b8a6 !important;
+}
+
+.fast-image-app[data-theme="light"] [class*="border-gray-700"],
+.fast-image-app[data-theme="light"] [class*="border-gray-800"],
+.fast-image-app[data-theme="light"] [class*="border-gray-600"] {
+  border-color: #cbd5e1 !important;
+}
+
+.fast-image-app[data-theme="light"] input[type="range"] {
+  background: #cbd5e1;
+}
+
+.fast-image-app[data-theme="light"] input[type="range"]::-webkit-slider-thumb,
+.fast-image-app[data-theme="light"] input[type="range"]::-moz-range-thumb {
+  background: #0f766e;
 }
