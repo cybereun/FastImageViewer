@@ -39,8 +39,35 @@ async function run(exe, args) {
   const child = spawn(exe, args, { env, windowsHide: true, stdio: 'ignore', cwd: root });
   return new Promise((resolve, reject) => {
     child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve() : reject(new Error(`${exe}: exit ${code}`)));
+    child.on('exit', code => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      const error = new Error(`${exe}: exit ${code}`);
+      error.exitCode = code;
+      reject(error);
+    });
   });
+}
+async function runInstallerWithRetry(exe, args) {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await run(exe, args);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 3) throw error;
+      console.warn(JSON.stringify({ mode, phase: 'installer-retry', attempt, error: String(error) }));
+      // Hosted Windows runners may still be scanning a newly copied NSIS
+      // bootstrapper even after the initial settle delay.  Retry the same
+      // verified payload instead of treating that transient launch failure
+      // as an application update failure.
+      await sleep(15_000);
+    }
+  }
+  throw lastError;
 }
 let target;
 let source;
@@ -52,7 +79,7 @@ if (mode === 'installer') {
   // payload open briefly after the copy.  Let that scan settle before starting
   // the bootstrapper so the smoke test measures installation, not file timing.
   await sleep(10_000);
-  await run(source, ['/S', `/D=${path.dirname(target)}`]);
+  await runInstallerWithRetry(source, ['/S', `/D=${path.dirname(target)}`]);
 } else {
   const targetDirectory = path.join(root, "한글 & 공백 ' 사진 앱");
   await fs.mkdir(targetDirectory);

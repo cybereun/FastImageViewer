@@ -90,6 +90,25 @@ it('removes the previous portable and Electron runtime environment from relaunch
     .toEqual({ Path: 'system', TEMP: 'temp' });
 });
 
+it('checks the release feed for the selected edition', async () => {
+  const app = {
+    isPackaged: true,
+    getVersion: () => '2.0.13',
+    getPath: () => 'C:\\temp\\fastimage-edition-test',
+  };
+  let requestedUrl = null;
+  const manager = createUpdateManager({
+    app,
+    edition: 'pro',
+    requestRelease: async (url) => {
+      requestedUrl = url;
+      return { tag_name: 'v2.0.13', assets: [] };
+    },
+  });
+  await expect(manager.checkForUpdates()).resolves.toMatchObject({ status: 'up-to-date' });
+  expect(requestedUrl).toBe('https://api.github.com/repos/cybereun/FastImageViewer-Pro/releases/latest');
+});
+
 // The synthetic PowerShell harness is exercised locally; the packaged update-e2e
 // below runs the real helper on every Windows CI build.
 describe.skipIf(process.platform !== 'win32' || process.env.CI === 'true')('PowerShell update transaction', () => {

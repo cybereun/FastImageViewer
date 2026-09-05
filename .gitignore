@@ -1,7 +1,9 @@
 ﻿node_modules/
 dist/
 dist-electron/
+dist-electron-pro/
 dist-e2e-installer/
+.electron-builder-*.json
 *.log
 .DS_Store
 Thumbs.db

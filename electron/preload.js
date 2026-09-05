@@ -91,6 +91,7 @@ contextBridge.exposeInMainWorld('electron', {
     loadPreferences: () => ipcRenderer.invoke('preferences:load'),
     savePreferences: (preferences) => ipcRenderer.invoke('preferences:save', preferences),
     getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getAppEdition: () => ipcRenderer.invoke('app:getEdition'),
     rendererReady: () => ipcRenderer.invoke('app:rendererReady'),
     getUpdateOutcome: () => ipcRenderer.invoke('app:getUpdateOutcome'),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),

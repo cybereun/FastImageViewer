@@ -77,11 +77,20 @@ npm run electron:build
 
 출력 파일:
 
-- `dist-electron/FastImage-2.0.6-Windows-Portable.exe`
-- `dist-electron/FastImage-2.0.6-Windows-Setup.exe`
+- `dist-electron/FastImage-2.1.0-Windows-Portable.exe`
+- `dist-electron/FastImage-2.1.0-Windows-Setup.exe`
 - `dist-electron/win-unpacked/`
 
 `Windows-Portable.exe`는 설치 없이 실행하는 버전입니다. `Windows-Setup.exe`는 사용자별 설치 방식이며 설치 과정에서 바탕화면과 시작 메뉴에 FastImage 바로가기를 만듭니다.
+
+무료 Community와 유료 Pro는 서로 다른 앱 ID와 업데이트 채널로 빌드합니다.
+
+```bash
+npm run electron:build:community  # dist-electron/
+npm run electron:build:pro        # dist-electron-pro/
+```
+
+에디션 분리와 업데이트 정책은 [docs/EDITIONS.md](docs/EDITIONS.md)에 정리되어 있습니다.
 
 ## 자동 업데이트
 
@@ -108,6 +117,7 @@ git push origin main --tags
 
 ## 릴리스 버전 히스토리
 
+- [`v2.1.0`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.1.0) — Community/Pro 에디션별 앱 ID·업데이트 채널·빌드 명령 추가
 - [`v2.0.0`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0) — 로컬 이미지 컬렉션, 안전한 일괄 파일 작업, 썸네일 캐시, 필터/메타데이터, 뷰어·편집기·설정 개선
 - [`v2.0.1`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.1) — GitHub Release 기반 업데이트 확인, 알림, 다운로드·SHA-256 검증, 포터블 EXE 자동 교체
 - [`v2.0.2`](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.2) — 하단 이미지 탭 UI와 초기 버전 표시

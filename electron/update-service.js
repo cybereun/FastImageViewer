@@ -8,8 +8,15 @@ const {
     compareVersions,
     parseSha256Digest,
 } = require('./update-utils');
+const { getEditionConfig, normalizeEdition } = require('./edition');
 
-const RELEASE_API_URL = 'https://api.github.com/repos/cybereun/FastImageViewer/releases/latest';
+const RELEASE_API_URL = getEditionConfig('community').releaseApiUrl
+    ?? 'https://api.github.com/repos/cybereun/FastImageViewer/releases/latest';
+const RELEASE_API_URLS = Object.freeze({
+    community: RELEASE_API_URL,
+    pro: getEditionConfig('pro').releaseApiUrl
+        ?? 'https://api.github.com/repos/cybereun/FastImageViewer-Pro/releases/latest',
+});
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_UPDATE_BYTES = 500 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -202,7 +209,10 @@ function isPortableBuild() {
         && process.env.PORTABLE_EXECUTABLE_FILE.trim().length > 0;
 }
 
-function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawnInstaller: spawnInstallerOverride } = {}) {
+function createUpdateManager({ app, edition = 'community', onUpdateAvailable, onDownloadProgress, spawnInstaller: spawnInstallerOverride, requestRelease: requestReleaseOverride } = {}) {
+    const appEdition = normalizeEdition(edition);
+    const releaseApiUrl = RELEASE_API_URLS[appEdition];
+    const requestRelease = requestReleaseOverride ?? requestJson;
     let latestUpdate = null;
     let downloadInFlight = null;
     const runner = createUpdateRunner({ app, executablePath: getPortableExecutablePath });
@@ -264,7 +274,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         }
 
         try {
-            const release = await requestJson(RELEASE_API_URL);
+            const release = await requestRelease(releaseApiUrl);
             const update = buildUpdateInfo(release, currentVersion, getDistribution());
             if (!update) {
                 latestUpdate = null;
@@ -323,6 +333,7 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
                     assetName: update.assetName,
                     stagedPath,
                     sha256,
+                    edition: appEdition,
                     distribution: getDistribution(),
                     downloadedAt: new Date().toISOString(),
                 });
@@ -352,6 +363,9 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
         const validation = await validateStagedUpdate(manifest);
         if (!validation.ok) return { status: 'error', message: validation.message };
         const distribution = getDistribution();
+        if (manifest.edition && normalizeEdition(manifest.edition) !== appEdition) {
+            return { status: 'error', message: 'This download belongs to a different FastImage edition. Please download the update again.' };
+        }
         const expectedAsset = `FastImage-${manifest.version}-Windows-${distribution === 'portable' ? 'Portable' : 'Setup'}.exe`;
         if (manifest.assetName !== expectedAsset || (manifest.distribution && manifest.distribution !== distribution)) {
             return { status: 'error', message: 'This download belongs to a different installation type. Please download the update again.' };
@@ -401,5 +415,6 @@ function createUpdateManager({ app, onUpdateAvailable, onDownloadProgress, spawn
 
 module.exports = {
     RELEASE_API_URL,
+    RELEASE_API_URLS,
     createUpdateManager,
 };

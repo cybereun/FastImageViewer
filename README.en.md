@@ -80,11 +80,20 @@ npm run electron:build
 
 The build produces:
 
-- dist-electron/FastImage-2.0.6-Windows-Portable.exe
-- dist-electron/FastImage-2.0.6-Windows-Setup.exe
+- dist-electron/FastImage-2.1.0-Windows-Portable.exe
+- dist-electron/FastImage-2.1.0-Windows-Setup.exe
 - dist-electron/win-unpacked/
 
 The portable executable runs without installation. The Setup executable installs per user and creates FastImage shortcuts in the Desktop and Start menu.
+
+Community and Pro builds use separate app IDs and update channels:
+
+~~~
+npm run electron:build:community  # dist-electron/
+npm run electron:build:pro        # dist-electron-pro/
+~~~
+
+The edition split and update policy are documented in [docs/EDITIONS.md](docs/EDITIONS.md).
 
 ## Automatic updates
 
@@ -111,6 +120,7 @@ Verification results and manual checks are recorded in [docs/FASTIMAGE-2.0-VERIF
 
 ## Release history
 
+- [v2.1.0](https://github.com/cybereun/FastImageViewer/releases/tag/v2.1.0) — Separate Community/Pro app IDs, update channels, and build commands
 - [v2.0.0](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.0) — Local image collections, safe batch file operations, thumbnail cache, filters/metadata, and viewer/editor improvements
 - [v2.0.1](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.1) — GitHub Release update checks, notifications, downloads, SHA-256 verification, and portable EXE replacement
 - [v2.0.2](https://github.com/cybereun/FastImageViewer/releases/tag/v2.0.2) — Bottom image tabs and initial version visibility
