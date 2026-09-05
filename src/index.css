@@ -137,7 +137,7 @@ body {
 }
 
 .fast-image-app[data-theme="light"] [class*="bg-blue-500"] {
-  background-color: #0d9488 !important;
+  background-color: #0f766e !important;
 }
 
 .fast-image-app[data-theme="light"] [class*="bg-blue-950"] {
