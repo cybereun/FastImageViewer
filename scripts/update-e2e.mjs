@@ -17,6 +17,7 @@ const id = crypto.randomUUID();
 const jobDirectory = path.join(profile, 'updates', id);
 await fs.mkdir(jobDirectory, { recursive: true });
 const version = require('../package.json').version;
+const installerTestProductName = 'FastImageTest';
 const env = cleanUpdateEnvironment();
 const ps = path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -74,7 +75,7 @@ let source;
 if (mode === 'installer') {
   source = path.join(profile, 'updates', 'setup.exe');
   await fs.copyFile(path.resolve(process.argv[3]), source);
-  target = path.join(root, 'installed', 'FastImageUpdateTest.exe');
+  target = path.join(root, 'installed', `${installerTestProductName}.exe`);
   // Windows Defender and the hosted runner can keep a freshly generated NSIS
   // payload open briefly after the copy.  Let that scan settle before starting
   // the bootstrapper so the smoke test measures installation, not file timing.
@@ -126,5 +127,5 @@ if (mode === 'rollback' && crypto.createHash('sha256').update(await fs.readFile(
 console.log(JSON.stringify({ mode, phase: status.phase, oldPid: before.pid, newPid: after.pid, version: after.version, root }));
 closeWindow(after.pid);
 await waitFor(() => { try { process.kill(after.pid, 0); return false; } catch { return true; } }, 'test app exit');
-if (mode === 'installer') await run(path.join(path.dirname(target), 'Uninstall FastImageUpdateTest.exe'), ['/S']);
+if (mode === 'installer') await run(path.join(path.dirname(target), `Uninstall ${installerTestProductName}.exe`), ['/S']);
 await fs.writeFile(path.join(root, 'result.json'), JSON.stringify({ mode, status, before, after }, null, 2));
